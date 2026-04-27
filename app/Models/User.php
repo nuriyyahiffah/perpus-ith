@@ -1,0 +1,114 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
+class User extends Authenticatable
+{
+    use HasFactory, Notifiable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'no_telp',
+        'role',
+        'prodi',
+        'angkatan',
+        'email_pribadi',
+        'alamat',
+        'nomor_identitas',
+        'status_akun',
+        'kategori_anggota_id',
+        'is_suspended_until',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'is_suspended_until' => 'datetime',
+        ];
+    }
+
+    /**
+     * Relasi ke Tabel Kategori Anggota (Mahasiswa, Dosen, dll)
+     */
+    public function kategori(): BelongsTo
+    {
+        // Pastikan model KategoriAnggota sudah ada
+        return $this->belongsTo(KategoriAnggota::class, 'kategori_anggota_id');
+    }
+
+    /**
+     * Relasi ke Tabel Anggota (Detail Aktivasi Perpustakaan)
+     */
+    public function anggota(): HasOne
+    {
+        // Parameter kedua adalah foreign key di tabel anggotas
+        return $this->hasOne(Anggota::class, 'user_id');
+    }
+
+    public function claims()
+    {
+        return $this->hasMany(Claim::class);
+    }
+
+    /**
+     * Helper untuk mengecek role admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Mutator WhatsApp API (Otomatis 08... ke 628...)
+     * Berguna untuk integrasi notifikasi WA SIPUSTAKA
+     */
+    protected function noTelp(): Attribute
+    {
+        return Attribute::make(
+            set: function ($value) {
+                if (!$value) return null;
+
+                // Membersihkan karakter selain angka
+                $cleanValue = preg_replace('/[^0-9]/', '', $value);
+
+                // Konversi awalan 0 ke 62
+                if (str_starts_with($cleanValue, '0')) {
+                    return '62' . substr($cleanValue, 1);
+                }
+
+                return $cleanValue;
+            },
+        );
+    }
+}
