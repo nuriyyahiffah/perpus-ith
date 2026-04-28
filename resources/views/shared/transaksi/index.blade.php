@@ -47,21 +47,21 @@
                         Sirkulasi <span class="text-blue-600">Peminjaman</span>
                     </h1>
                     <p class="text-slate-500 text-[10px] mt-2 font-bold uppercase tracking-widest italic">
-                        Manajemen Peminjaman & Kondisi Buku SMK Negeri 3 Parepare
+                        Manajemen Peminjaman & Pengembalian Buku Perpustakaan ITH
                     </p>
                 </div>
-                
+
                 {{-- PERBAIKAN: Status Filter disesuaikan dengan Controller --}}
                 <div class="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-                    <a href="{{ route('shared.transaksi.index') }}" 
+                    <a href="{{ route('shared.transaksi.index') }}"
                        class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all {{ !request('status') ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-600' }}">
                         Semua
                     </a>
-                    <a href="{{ route('shared.transaksi.index', ['status' => 'dipinjam']) }}" 
+                    <a href="{{ route('shared.transaksi.index', ['status' => 'dipinjam']) }}"
                        class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all {{ request('status') == 'dipinjam' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-600' }}">
                         Dipinjam
                     </a>
-                    <a href="{{ route('shared.transaksi.index', ['status' => 'dikembalikan']) }}" 
+                    <a href="{{ route('shared.transaksi.index', ['status' => 'dikembalikan']) }}"
                        class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all {{ request('status') == 'dikembalikan' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-600' }}">
                         Kembali
                     </a>

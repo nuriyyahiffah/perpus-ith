@@ -7,9 +7,11 @@ use App\Models\Peminjaman;
 use App\Models\User;
 use App\Models\Buku;
 use App\Models\Eksemplar;
-use App\Models\Setting; // Pastikan Model Setting diimport
+use App\Models\Setting;
+use App\Models\Notification; // PENTING: Untuk notifikasi Web
 use Carbon\Carbon;
 use App\Traits\WhatsappTrait;
+use App\Notifications\NotifikasiBuku;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -33,7 +35,7 @@ class PeminjamanController extends Controller
     }
 
     /**
-     * PROSES PENGEMBALIAN (Otomatis Update Stok & Eksemplar + Notifikasi)
+     * PROSES PENGEMBALIAN (Otomatis Update Stok & Eksemplar + Notifikasi Web & WA)
      */
     public function kembalikan(Request $request, $id)
     {
@@ -44,11 +46,10 @@ class PeminjamanController extends Controller
         ]);
 
         try {
-            // Ambil data peminjaman beserta relasi user dan buku
             $peminjaman = Peminjaman::with(['user', 'buku'])->findOrFail($id);
 
             DB::transaction(function () use ($request, $peminjaman) {
-                // 1. Update Status Transaksi Peminjaman
+                // 1. Update Status Transaksi
                 $peminjaman->update([
                     'status'           => 'dikembalikan',
                     'tgl_kembali'      => Carbon::now(),
@@ -57,21 +58,16 @@ class PeminjamanController extends Controller
                     'catatan_kondisi'  => $request->catatan_kondisi,
                 ]);
 
-                // 2. Cari data Eksemplar
+                // 2. Update Status Eksemplar (Case Sensitive Handling)
                 $eksemplar = Eksemplar::find($peminjaman->eksemplar_id);
-                if (!$eksemplar) {
-                    $noIndukClean = trim($peminjaman->no_induk);
-                    $eksemplar = Eksemplar::where('no_induk', 'LIKE', "%$noIndukClean%")->first();
-                }
-
-                // 3. Jika Eksemplar ditemukan, update status fisiknya
                 if ($eksemplar) {
-                    $statusFisik = ($request->kondisi_kembali == 'hilang') ? 'hilang' : 
-                                  (($request->kondisi_kembali == 'rusak') ? 'rusak' : 'tersedia');
-                    
+                    $kondisi = strtolower($request->kondisi_kembali);
+                    $statusFisik = ($kondisi == 'hilang') ? 'hilang' :
+                                  (($kondisi == 'rusak') ? 'rusak' : 'tersedia');
+
                     $eksemplar->update(['status' => $statusFisik]);
 
-                    // 4. Sinkronisasi Stok Katalog
+                    // 3. Sinkronisasi Stok Buku
                     $buku = $eksemplar->buku;
                     if ($buku) {
                         $jumlahTersedia = Eksemplar::where('buku_id', $buku->id)
@@ -80,29 +76,39 @@ class PeminjamanController extends Controller
                         $buku->update(['stok' => $jumlahTersedia]);
                     }
                 }
+
+                // 4. NOTIFIKASI WEB (Simpan ke tabel notifications)
+                Notification::create([
+                    'user_id'      => $peminjaman->user_id,
+                    'judul'        => 'Pengembalian Berhasil',
+                    'pesan'        => 'Buku "' . $peminjaman->buku->judul . '" telah berhasil dikembalikan dalam kondisi ' . $request->kondisi_kembali . '.',
+                    'tipe'         => 'success',
+                    'ikon'         => 'bi-journal-check',
+                    'sudah_dibaca' => false,
+                ]);
             });
 
-            // --- LOGIKA NOTIFIKASI WHATSAPP ---
+            // --- NOTIFIKASI WHATSAPP (Di luar DB Transaction) ---
             $notifSetting = Setting::where('key', 'notif_return')->first();
             $phone = $peminjaman->user->no_hp ?? $peminjaman->user->no_telp;
 
             if ($notifSetting && $notifSetting->value == '1' && $phone) {
-                $namaPerpus = Setting::where('key', 'nama_perpus')->first()->value ?? 'SIPUSTAKA';
-                
+                $namaPerpus = Setting::where('key', 'nama_perpus')->first()->value ?? 'SIPUSTAKA ITH';
+
                 $pesan = "✅ *PENGEMBALIAN BUKU BERHASIL*\n\n" .
                          "Halo *{$peminjaman->user->name}*,\n" .
                          "Buku berikut telah diterima kembali:\n\n" .
                          "📖 Judul: *{$peminjaman->buku->judul}*\n" .
-                         "📅 Tgl Kembali: " . Carbon::now()->format('d-m-Y H:i') . "\n" .
+                         "📅 Tgl Kembali: " . Carbon::now()->format('d-m-Y H:i') . " WITA\n" .
                          "🛡️ Kondisi: " . ucfirst($request->kondisi_kembali) . "\n" .
                          "💰 Denda Fisik: Rp " . number_format($request->denda_fisik ?? 0, 0, ',', '.') . "\n\n" .
-                         "Terima kasih telah mengembalikan buku.\n" .
+                         "Terima kasih telah tertib mengembalikan buku.\n" .
                          "-- {$namaPerpus}";
 
                 $this->kirimPesanWA($phone, $pesan);
             }
 
-            return redirect()->route('shared.transaksi.index')->with('success', 'Buku telah kembali dan notifikasi berhasil dikirim!');
+            return redirect()->route('shared.transaksi.index')->with('success', 'Buku berhasil dikembalikan dan notifikasi dikirim!');
 
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal: ' . $e->getMessage());
@@ -144,13 +150,23 @@ class PeminjamanController extends Controller
                     ]);
 
                     $eksemplar->update(['status' => 'dipinjam']);
-                    
+
                     $buku = $eksemplar->buku;
                     $stokBaru = Eksemplar::where('buku_id', $buku->id)->where('status', 'tersedia')->count();
                     $buku->update(['stok' => $stokBaru]);
 
                     $daftarBuku[] = $buku->judul;
                 }
+
+                // Notifikasi Web Pinjam Baru
+                Notification::create([
+                    'user_id'      => $request->user_id,
+                    'judul'        => 'Peminjaman Berhasil',
+                    'pesan'        => 'Buku ' . implode(', ', $daftarBuku) . ' telah berhasil dipinjam.',
+                    'tipe'         => 'success',
+                    'ikon'         => 'bi-check-circle',
+                    'sudah_dibaca' => false,
+                ]);
             });
 
             // Notifikasi WhatsApp Pinjam Baru
@@ -160,14 +176,14 @@ class PeminjamanController extends Controller
                 foreach($daftarBuku as $index => $judul) {
                     $listBuku .= ($index+1) . ". " . $judul . "\n";
                 }
-                
+
                 $pesan = "🔔 *NOTIFIKASI PINJAM*\n\n" .
                          "Halo *{$user->name}*,\n" .
-                         "Peminjaman buku berhasil:\n\n" . 
-                         $listBuku . 
+                         "Peminjaman buku berhasil:\n\n" .
+                         $listBuku .
                          "\n📅 *Batas Kembali:* " . Carbon::parse($request->tgl_kembali)->format('d-m-Y') . "\n" .
                          "Mohon jaga buku dengan baik.";
-                
+
                 $this->kirimPesanWA($phone, $pesan);
             }
 
@@ -192,6 +208,15 @@ class PeminjamanController extends Controller
         $transaksi->update([
             'tgl_kembali' => $deadline->addDays(7),
             'is_extended' => true
+        ]);
+
+        Notification::create([
+            'user_id'      => $transaksi->user_id,
+            'judul'        => 'Masa Pinjam Diperpanjang',
+            'pesan'        => 'Batas waktu kembali buku "' . $transaksi->buku->judul . '" ditambah 7 hari.',
+            'tipe'         => 'warning',
+            'ikon'         => 'bi-calendar-plus',
+            'sudah_dibaca' => false,
         ]);
 
         return back()->with('success', 'Masa pinjam diperpanjang 7 hari.');
@@ -254,13 +279,12 @@ class PeminjamanController extends Controller
     }
 
     /**
-     * Fungsi Kirim WhatsApp (Mengambil Token dari Settings Database)
+     * Fungsi Kirim WhatsApp
      */
     private function kirimPesanWA($target, $pesan)
     {
-        // Ambil token dari tabel settings agar sinkron dengan menu Pengaturan
         $tokenSetting = Setting::where('key', 'wa_token')->first();
-        $token = $tokenSetting ? $tokenSetting->value : env('FONNTE_TOKEN');
+        $token = ($tokenSetting && !empty($tokenSetting->value)) ? $tokenSetting->value : env('FONNTE_TOKEN');
 
         $curl = curl_init();
         curl_setopt_array($curl, array(
@@ -275,7 +299,7 @@ class PeminjamanController extends Controller
             CURLOPT_POSTFIELDS => array(
                 'target' => $target,
                 'message' => $pesan,
-                'countryCode' => '62', 
+                'countryCode' => '62',
             ),
             CURLOPT_HTTPHEADER => array(
                 'Authorization: ' . $token
