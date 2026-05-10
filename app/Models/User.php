@@ -89,26 +89,43 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isKaprodi()
+{
+    return $this->role === 'kaprodi';
+}
+
+public function isDosen()
+{
+    return $this->role === 'dosen';
+}
+
     /**
      * Mutator WhatsApp API (Otomatis 08... ke 628...)
      * Berguna untuk integrasi notifikasi WA SIPUSTAKA
      */
-    protected function noTelp(): Attribute
-    {
-        return Attribute::make(
-            set: function ($value) {
-                if (!$value) return null;
+   // Tambahkan di bagian atas jika belum ada
 
-                // Membersihkan karakter selain angka
-                $cleanValue = preg_replace('/[^0-9]/', '', $value);
+// Ganti fungsi noTelp yang lama dengan ini
+protected function noTelp(): Attribute
+{
+    return Attribute::make(
+        // Getter: Memastikan data no_telp bisa dibaca secara normal
+        get: fn ($value) => $value,
 
-                // Konversi awalan 0 ke 62
-                if (str_starts_with($cleanValue, '0')) {
-                    return '62' . substr($cleanValue, 1);
-                }
+        // Setter: Otomatis mengubah 08... menjadi 628... saat data disimpan/diupdate
+        set: function ($value) {
+            if (!$value) return null;
 
-                return $cleanValue;
-            },
-        );
-    }
+            $nomor = preg_replace('/[^0-9]/', '', $value);
+
+            if (str_starts_with($nomor, '0')) {
+                return '62' . substr($nomor, 1);
+            } elseif (str_starts_with($nomor, '8')) {
+                return '62' . $nomor;
+            }
+
+            return $nomor;
+        },
+    );
+}
 }

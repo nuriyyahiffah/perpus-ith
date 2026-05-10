@@ -8,52 +8,43 @@ use Illuminate\Support\Facades\Auth;
 
 class UsulanController extends Controller
 {
-    /**
-     * 1. Menampilkan DAFTAR & RIWAYAT
-     */
     public function index()
     {
         $user = Auth::user();
+        $role = strtolower($user->role); // Gunakan strtolower agar aman
 
-        // Jika Pustakawan/Admin: Lihat semua usulan dari semua user
-        if ($user->role === 'pustakawan' || $user->role === 'admin') {
-            $usulan = UsulanBuku::with('user')->latest()->get();
-            return view('shared.transaksi.usulan_index', compact('usulan'));
+        // 1. Admin & Pustakawan
+        if ($role === 'pustakawan' || $role === 'admin') {
+            $riwayatUsulan = UsulanBuku::with('user')->latest()->get();
+            return view('shared.transaksi.usulan_index', compact('riwayatUsulan'));
         }
 
-        // Jika Dosen atau Mahasiswa: Lihat riwayat miliknya sendiri
-        if ($user->role === 'dosen' || $user->role === 'mahasiswa') {
-            // Kita gunakan nama variabel 'riwayatUsulan' agar sesuai dengan error di gambar tadi
+        // 2. Dosen ATAU Kaprodi ATAU Mahasiswa
+        if (in_array($role, ['dosen', 'kaprodi', 'mahasiswa'])) {
             $riwayatUsulan = UsulanBuku::where('user_id', $user->id)->latest()->get();
-            
-            // Arahkan ke view sesuai role masing-masing
-            $viewPath = ($user->role === 'dosen') ? 'dosen.riwayat_usulan' : 'mahasiswa.riwayat_usulan';
-            
+
+            // Arahkan ke view dosen jika dia dosen/kaprodi
+            $viewPath = ($role === 'dosen' || $role === 'kaprodi') ? 'dosen.riwayat_usulan' : 'mahasiswa.riwayat_usulan';
+
             return view($viewPath, compact('riwayatUsulan'));
         }
 
         abort(403);
     }
 
-    /**
-     * 2. Menampilkan FORM INPUT USULAN
-     */
     public function create()
     {
-        $user = Auth::user();
+        $role = strtolower(Auth::user()->role);
 
-        // Izinkan Dosen dan Mahasiswa
-        if ($user->role === 'dosen' || $user->role === 'mahasiswa') {
-            $viewPath = ($user->role === 'dosen') ? 'dosen.usulan' : 'mahasiswa.usulan';
+        // PERBAIKAN: Tambahkan 'kaprodi' di sini
+        if (in_array($role, ['dosen', 'kaprodi', 'mahasiswa'])) {
+            $viewPath = ($role === 'dosen' || $role === 'kaprodi') ? 'dosen.usulan' : 'mahasiswa.usulan';
             return view($viewPath);
         }
 
         abort(403, 'Akses dibatasi.');
     }
 
-    /**
-     * 3. Menyimpan data usulan ke Database
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -72,8 +63,10 @@ class UsulanController extends Controller
             'status' => 'pending',
         ]);
 
-        // Cek kemana harus diarahkan setelah simpan
-        $route = (Auth::user()->role === 'dosen') ? 'dosen.usulan.riwayat' : 'mahasiswa.usulan.riwayat';
+        $role = strtolower(Auth::user()->role);
+        
+        // PERBAIKAN: Redirect ke rute dosen jika dia dosen/kaprodi
+        $route = ($role === 'dosen' || $role === 'kaprodi') ? 'dosen.usulan.riwayat' : 'mahasiswa.usulan.riwayat';
 
         return redirect()->route($route)->with('success', 'USULAN BUKU BERHASIL DIKIRIM!');
     }

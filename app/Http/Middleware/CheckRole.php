@@ -11,26 +11,29 @@ class CheckRole
 {
     /**
      * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @param  string  ...$roles  (Menangkap banyak role sekaligus)
+     * @return \Symfony\Component\HttpFoundation\Response
      */
-   public function handle(Request $request, Closure $next, ...$roles)
-{
-    if (!Auth::check()) {
+    public function handle(Request $request, Closure $next, ...$roles): Response
+    {
+       
+      if (!Auth::check()) {
         return redirect()->route('login');
     }
 
     $user = Auth::user();
-    
-    // Jika role user ada dalam daftar yang diizinkan, silakan lewat
-    if (in_array(strtolower($user->role), $roles)) {
+
+    // Mengubah role user dan daftar role yang diminta menjadi huruf kecil semua sebelum dibandingkan
+    $userRole = strtolower($user->role);
+    $allowedRoles = array_map('strtolower', $roles);
+
+    if (in_array($userRole, $allowedRoles)) {
         return $next($request);
     }
 
-    // JIKA TIDAK DIIZINKAN, arahkan ke rumahnya masing-masing (biar tidak nyasar)
-    $role = strtolower($user->role);
-    if ($role === 'admin') return redirect()->route('admin.dashboard');
-    if ($role === 'pustakawan') return redirect()->route('pustakawan.dashboard');
-    if ($role === 'dosen') return redirect()->route('dosen.beranda');
-    
-    return redirect()->route('mahasiswa.beranda');
+    abort(403, 'AKSES DITOLAK. ROLE AKUN ANDA ADALAH "' . $user->role . '", SEDANGKAN HALAMAN INI MEMERLUKAN SALAH SATU DARI ROLE BERIKUT: ' . implode(', ', $roles));
 }
 }

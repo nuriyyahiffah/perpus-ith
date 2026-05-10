@@ -87,11 +87,6 @@
                     Masuk ke Sistem
                 </button>
             </div>
-
-            <p class="text-center text-[11px] text-slate-500 mt-8 font-semibold tracking-wide">
-                Belum memiliki akun resmi?
-                <a href="{{ route('register') }}" class="text-blue-700 font-black hover:text-blue-800 ml-1 underline underline-offset-4 decoration-2">DAFTAR DISINI</a>
-            </p>
         </form>
     </div>
 

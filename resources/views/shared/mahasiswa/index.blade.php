@@ -18,17 +18,14 @@
     openAdd: false,
     openEdit: false,
     openImport: false,
-    editData: {},
+    editData: { id: null, name: '', nomor_identitas: '', prodi: '', angkatan: '' },
     search: '',
     filterVal: 'name_asc',
-    // Simpan data asli di sini agar tidak membebani komputasi
     allMahasiswa: {{ json_encode($mahasiswa) }},
 
     get filteredMahasiswa() {
-        // Buat salinan data agar data asli tidak rusak
         let data = [...this.allMahasiswa];
         
-        // 1. Logika Pencarian
         if (this.search !== '') {
             const s = this.search.toLowerCase();
             data = data.filter(item =>
@@ -37,32 +34,25 @@
             );
         }
 
-        // 2. Logika Sorting & Filtering
-        if (this.filterVal === 'name_asc') {
-            data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        } 
-        else if (this.filterVal === 'name_desc') {
-            data.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
-        } 
-        // Perbaikan Utama untuk NIM: Gunakan perbandingan angka atau string yang aman
-        else if (this.filterVal === 'nim_asc') {
-            data.sort((a, b) => String(a.nomor_identitas).localeCompare(String(b.nomor_identitas), undefined, {numeric: true}));
-        } 
-        else if (this.filterVal === 'nim_desc') {
-            data.sort((a, b) => String(b.nomor_identitas).localeCompare(String(a.nomor_identitas), undefined, {numeric: true}));
-        } 
-        // Filter Program Studi
+        if (this.filterVal === 'name_asc') data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        else if (this.filterVal === 'name_desc') data.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+        else if (this.filterVal === 'nim_asc') data.sort((a, b) => String(a.nomor_identitas).localeCompare(String(b.nomor_identitas), undefined, {numeric: true}));
+        else if (this.filterVal === 'nim_desc') data.sort((a, b) => String(b.nomor_identitas).localeCompare(String(a.nomor_identitas), undefined, {numeric: true}));
         else if (this.filterVal.startsWith('prodi_')) {
             let p = this.filterVal.replace('prodi_', '');
             data = data.filter(item => item.prodi === p);
-        } 
-        // Filter Angkatan
+        }
         else if (this.filterVal.startsWith('year_')) {
             let y = this.filterVal.replace('year_', '');
             data = data.filter(item => String(item.angkatan) === y);
         }
         
         return data;
+    },
+
+    prepareEdit(mhs) {
+        this.editData = { ...mhs };
+        this.openEdit = true;
     }
 }">
 
@@ -74,17 +64,11 @@
         @endif
 
         <main class="flex-1 p-8 lg:p-12 overflow-y-auto">
+            {{-- Flash Messages --}}
             @if(session('success'))
                 <div class="bg-emerald-500 text-white p-4 rounded-2xl mb-6 shadow-lg shadow-emerald-100 flex items-center gap-3">
                     <i class="bi bi-check-circle-fill"></i>
                     <span class="text-sm font-bold">{{ session('success') }}</span>
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="bg-red-500 text-white p-4 rounded-2xl mb-6 shadow-lg shadow-red-100 flex items-center gap-3">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span class="text-sm font-bold">{{ session('error') }}</span>
                 </div>
             @endif
 
@@ -109,6 +93,7 @@
                 </div>
             </header>
 
+            {{-- Filters --}}
             <div class="flex flex-col md:flex-row gap-4 mb-8">
                 <div class="relative flex-1">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-5 text-slate-400">
@@ -136,16 +121,12 @@
                                 <option value="prodi_{{ $prodi }}">Prodi: {{ $prodi }}</option>
                             @endforeach
                         </optgroup>
-                        <optgroup label="Filter Tahun Angkatan">
-                            @foreach($mahasiswa->unique('angkatan')->pluck('angkatan')->sortDesc() as $year)
-                                <option value="year_{{ $year }}">Angkatan: {{ $year }}</option>
-                            @endforeach
-                        </optgroup>
                     </select>
                     <i class="bi bi-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
                 </div>
             </div>
 
+            {{-- Table --}}
             <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
@@ -171,7 +152,7 @@
                                     </td>
                                     <td class="px-8 py-6 text-center">
                                         <div class="flex justify-center gap-2">
-                                            <button @click="openEdit = true; editData = mhs"
+                                            <button @click="prepareEdit(mhs)"
                                                 class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-blue-600 hover:text-white transition-all">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
@@ -185,9 +166,6 @@
                                     </td>
                                 </tr>
                             </template>
-                            <tr x-show="filteredMahasiswa.length === 0">
-                                <td colspan="4" class="px-8 py-20 text-center text-slate-400 italic font-bold uppercase tracking-widest text-[10px]">Data tidak ditemukan</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -195,6 +173,7 @@
         </main>
     </div>
 
+    {{-- Modal Import (Sudah Ada) --}}
     <div x-show="openImport" x-cloak class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
         <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden" @click.away="openImport = false">
             <div class="bg-emerald-600 p-6">
@@ -208,13 +187,96 @@
                     <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Pilih File Master Excel</label>
                     <input type="file" name="file_excel" required 
                         class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border border-slate-100 rounded-2xl p-2 bg-slate-50/50">
-                    <p class="mt-3 text-[10px] text-slate-400 italic font-medium leading-relaxed uppercase">
-                        * Format: Nama, NIM, Prodi. Password = NIM.
-                    </p>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" @click="openImport = false" class="px-6 py-3 text-[10px] font-black uppercase text-slate-400 rounded-2xl transition">Batal</button>
+                    <button type="submit" class="px-8 py-3 text-[10px] font-black uppercase text-white bg-emerald-600 rounded-2xl shadow-lg transition">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal Tambah (Fungsional) --}}
+    <div x-show="openAdd" x-cloak class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden" x-data="{ nim: '', get angkatan() { return this.nim.length >= 2 ? '20' + this.nim.substring(0, 2) : ''; } }">
+            <div class="bg-blue-600 p-8 text-white">
+                <h3 class="font-extrabold flex items-center gap-3 uppercase tracking-tighter italic text-xl">
+                    <i class="bi bi-person-plus-fill"></i> Tambah Mahasiswa
+                </h3>
+            </div>
+            <form action="{{ route('shared.mahasiswa.store') }}" method="POST" class="p-10 space-y-6">
+                @csrf
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nama Lengkap</label>
+                    <input type="text" name="name" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold outline-blue-500 transition-all shadow-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">NIM</label>
+                        <input type="number" name="nomor_identitas" x-model="nim" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold outline-blue-500 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Angkatan</label>
+                        <input type="text" name="angkatan" :value="angkatan" readonly class="w-full bg-slate-100 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-black text-blue-600 cursor-not-allowed shadow-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Program Studi</label>
+                    <select name="prodi" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold outline-blue-500 shadow-sm appearance-none">
+                        <option value="Sistem Informasi">Sistem Informasi</option>
+                        <option value="Informatika">Informatika</option>
+                        <option value="Teknik Komputer">Teknik Komputer</option>
+                        <option value="Matematika">Matematika</option>
+                    </select>
                 </div>
                 <div class="flex justify-end gap-3 pt-4">
-                    <button type="button" @click="openImport = false" class="px-6 py-3 text-[10px] font-black uppercase text-slate-400 hover:bg-slate-50 rounded-2xl transition">Batal</button>
-                    <button type="submit" class="px-8 py-3 text-[10px] font-black uppercase text-white bg-emerald-600 hover:bg-emerald-700 rounded-2xl shadow-lg shadow-emerald-100 transition">Upload Sekarang</button>
+                    <button type="button" @click="openAdd = false" class="px-8 py-4 text-[10px] font-black uppercase text-slate-400 hover:bg-slate-50 rounded-2xl transition">Batal</button>
+                    <button type="submit" class="px-10 py-4 text-[10px] font-black uppercase text-white bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-xl shadow-blue-100 transition-all flex items-center gap-3">
+                        <i class="bi bi-cloud-check-fill text-sm"></i> Simpan Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal Edit (Fungsional) --}}
+    <div x-show="openEdit" x-cloak class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden">
+            <div class="bg-slate-800 p-8 text-white">
+                <h3 class="font-extrabold flex items-center gap-3 uppercase tracking-tighter italic text-xl">
+                    <i class="bi bi-pencil-square text-blue-400"></i> Perbarui Data
+                </h3>
+            </div>
+            <form :action="`/admin/mahasiswa/${editData.id}`" method="POST" class="p-10 space-y-6">
+                @csrf @method('PUT')
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nama Lengkap</label>
+                    <input type="text" name="name" x-model="editData.name" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold outline-blue-500 shadow-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">NIM</label>
+                        <input type="number" name="nomor_identitas" x-model="editData.nomor_identitas" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold outline-blue-500 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Angkatan</label>
+                        <input type="text" name="angkatan" x-model="editData.angkatan" class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold outline-blue-500 shadow-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Program Studi</label>
+                    <select name="prodi" x-model="editData.prodi" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-6 text-sm font-bold outline-blue-500 shadow-sm appearance-none">
+                        <option value="Sistem Informasi">Sistem Informasi</option>
+                        <option value="Informatika">Informatika</option>
+                        <option value="Teknik Komputer">Teknik Komputer</option>
+                        <option value="Matematika">Matematika</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" @click="openEdit = false" class="px-8 py-4 text-[10px] font-black uppercase text-slate-400 hover:bg-slate-50 rounded-2xl transition">Tutup</button>
+                    <button type="submit" class="px-10 py-4 text-[10px] font-black uppercase text-white bg-slate-800 hover:bg-slate-900 rounded-2xl shadow-xl transition-all flex items-center gap-3">
+                        <i class="bi bi-arrow-repeat text-sm text-blue-400"></i> Update Mahasiswa
+                    </button>
                 </div>
             </form>
         </div>

@@ -10,7 +10,8 @@ use App\Models\KategoriAnggota;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use App\Imports\UsersImport; // Pastikan ini di-import
+use App\Imports\UsersImport;
+use Illuminate\Support\Str;
 
 class MahasiswaController extends Controller
 {
@@ -19,7 +20,6 @@ class MahasiswaController extends Controller
      */
     public function index()
     {
-        // Menampilkan data mahasiswa dengan relasi kategori
         $mahasiswa = User::where('role', 'mahasiswa')
                          ->with('kategori')
                          ->latest()
@@ -31,7 +31,7 @@ class MahasiswaController extends Controller
     }
 
     /**
-     * 2. Menyimpan data mahasiswa manual (Store)
+     * 2. Menyimpan data mahasiswa (Format Email: namalengkap.nim@mahasiswa.ith.ac.id)
      */
     public function store(Request $request)
     {
@@ -39,21 +39,27 @@ class MahasiswaController extends Controller
             'name' => 'required|string|max:255',
             'nomor_identitas' => 'required|string|unique:users,nomor_identitas',
             'prodi' => 'required|string|max:100',
-            'email' => 'required|email|unique:users,email',
         ]);
 
         try {
             DB::beginTransaction();
 
+            // 1. Logika Angkatan
             $duaAngkaDepan = substr($request->nomor_identitas, 0, 2);
             $tahunAngkatan = '20' . $duaAngkaDepan;
+
+            // 2. Logika Format Email Baru
+            // strtolower mengubah ke huruf kecil semua
+            // str_replace(' ', '', ...) menghapus semua spasi agar nama tersambung utuh
+            $namaTanpaSpasi = str_replace(' ', '', strtolower($request->name));
+            $emailOtomatis = $namaTanpaSpasi . '.' . $request->nomor_identitas . '@mahasiswa.ith.ac.id';
 
             $kategoriMhs = KategoriAnggota::where('nama_kategori', 'Mahasiswa')->first();
 
             User::create([
                 'name'                => $request->name,
                 'nomor_identitas'     => $request->nomor_identitas,
-                'email'               => $request->email,
+                'email'               => $emailOtomatis, 
                 'password'            => Hash::make($request->nomor_identitas),
                 'role'                => 'mahasiswa',
                 'prodi'               => $request->prodi,
@@ -72,53 +78,7 @@ class MahasiswaController extends Controller
     }
 
     /**
-     * 3. Import Data via Excel (Perbaikan Utama)
-     */
-    public function import(Request $request)
-    {
-        // Validasi input file
-        $request->validate([
-            'file_excel' => 'required|mimes:xlsx,xls,csv|max:2048'
-        ], [
-            'file_excel.required' => 'Silakan pilih file terlebih dahulu.',
-            'file_excel.mimes' => 'Format file harus .xlsx atau .xls'
-        ]);
-
-        try {
-            // Pastikan file terbaca
-            if ($request->hasFile('file_excel')) {
-                Excel::import(new UsersImport, $request->file('file_excel'));
-                return redirect()->back()->with('success', 'Import Berhasil! Data mahasiswa telah diperbarui.');
-            }
-            
-            return redirect()->back()->with('error', 'File tidak ditemukan.');
-
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-             // Menangkap error jika isi Excel tidak sesuai validasi di UsersImport
-             $failures = $e->failures();
-             $errorMsg = "Gagal Import baris ke: ";
-             foreach ($failures as $failure) {
-                 $errorMsg .= $failure->row() . " (" . implode(", ", $failure->errors()) . ") ";
-             }
-             return redirect()->back()->with('error', $errorMsg);
-
-        } catch (\Exception $e) {
-            // Menampilkan error umum (misal: NIM duplikat di database)
-            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * 4. Export Excel
-     */
-    public function export()
-    {
-        $fileName = 'Daftar_Mahasiswa_ITH_' . date('Ymd_His') . '.xlsx';
-        return Excel::download(new MahasiswaExport, $fileName);
-    }
-
-    /**
-     * 5. Update data
+     * 3. Update data mahasiswa
      */
     public function update(Request $request, $id)
     {
@@ -126,19 +86,23 @@ class MahasiswaController extends Controller
             'name' => 'required|string|max:255',
             'nomor_identitas' => 'required|string|unique:users,nomor_identitas,' . $id,
             'prodi' => 'required|string|max:100',
-            'email' => 'required|email|unique:users,email,' . $id,
         ]);
 
         try {
             $mahasiswa = User::findOrFail($id);
+            
             $duaAngkaDepan = substr($request->nomor_identitas, 0, 2);
             $tahunAngkatan = '20' . $duaAngkaDepan;
+            
+            // Generate ulang email dengan nama tanpa spasi
+            $namaTanpaSpasi = str_replace(' ', '', strtolower($request->name));
+            $emailOtomatis = $namaTanpaSpasi . '.' . $request->nomor_identitas . '@mahasiswa.ith.ac.id';
 
             $mahasiswa->update([
                 'name'            => $request->name,
                 'nomor_identitas' => $request->nomor_identitas,
+                'email'           => $emailOtomatis,
                 'prodi'           => $request->prodi,
-                'email'           => $request->email,
                 'angkatan'        => $tahunAngkatan,
             ]);
 
@@ -149,7 +113,7 @@ class MahasiswaController extends Controller
     }
 
     /**
-     * 6. Menghapus data
+     * 4. Menghapus data mahasiswa
      */
     public function destroy($id)
     {
@@ -158,7 +122,36 @@ class MahasiswaController extends Controller
             $mahasiswa->delete();
             return redirect()->back()->with('success', 'Data mahasiswa berhasil dihapus!');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Data tidak ditemukan atau gagal dihapus.');
+            return redirect()->back()->with('error', 'Gagal menghapus data.');
         }
+    }
+
+    /**
+     * 5. Import Data via Excel
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file_excel' => 'required|mimes:xlsx,xls,csv|max:2048'
+        ]);
+
+        try {
+            if ($request->hasFile('file_excel')) {
+                Excel::import(new UsersImport, $request->file('file_excel'));
+                return redirect()->back()->with('success', 'Import Berhasil!');
+            }
+            return redirect()->back()->with('error', 'File tidak ditemukan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 6. Export Excel
+     */
+    public function export()
+    {
+        $fileName = 'Daftar_Mahasiswa_ITH_' . date('Ymd_His') . '.xlsx';
+        return Excel::download(new MahasiswaExport, $fileName);
     }
 }

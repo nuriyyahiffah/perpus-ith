@@ -11,17 +11,29 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Gunakan if !hasTable agar aman jika tabel sudah ada
         if (!Schema::hasTable('users')) {
             Schema::create('users', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
                 $table->string('email')->unique();
+
+                // Tambahkan nomor identitas untuk NIM (Mahasiswa) atau NIDN (Dosen)
+                $table->string('nomor_identitas')->unique()->nullable();
+
                 $table->timestamp('email_verified_at')->nullable();
                 $table->string('password');
+
+                /** * Role yang didukung:
+                 * 'admin', 'kaprodi', 'dosen', 'mahasiswa'
+                 */
                 $table->string('role')->default('mahasiswa');
-                $table->string('prodi')->nullable(); // Ditambahkan langsung di sini
+
+                // Menyimpan prodi (misal: Informatika, Sistem Informasi, dll)
+                $table->string('prodi')->nullable();
+
+                // Nomor WA untuk notifikasi otomatis
                 $table->string('no_telp')->nullable();
+
                 $table->rememberToken();
                 $table->timestamps();
             });

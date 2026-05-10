@@ -19,10 +19,19 @@
         <div class="container mx-auto px-6">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-5">
-                    {{-- Perbaikan: Sesuaikan route dashboard kamu (admin.dashboard atau dashboard) --}}
-                    <a href="{{ route('admin.dashboard') }}" class="bg-white/10 hover:bg-white/20 h-10 w-10 rounded-xl flex items-center justify-center transition">
-                        <i class="bi bi-arrow-left text-xl"></i>
-                    </a>
+
+                 @php
+    // Ambil role dan ubah ke huruf kecil untuk keamanan pengecekan
+    $userRole = strtolower(Auth::user()->role);
+    
+    // Tentukan rute berdasarkan role
+    $targetRoute = ($userRole === 'admin') ? 'sidebar-admin';
+    $targetRoute = ($userRole === 'pustakawan') ?  'sidebar-pustakawan';
+@endphp
+
+<a href="{{ route($targetRoute) }}" class="bg-white/10 hover:bg-white/20 h-10 w-10 rounded-xl flex items-center justify-center transition">
+    <i class="bi bi-arrow-left text-xl"></i>
+</a>
                     <img src="{{ asset('images/logo_ith.png') }}" alt="Logo ITH" class="h-14 w-auto">
                     <div class="border-l border-white/20 pl-5">
                         <h1 class="text-2xl font-black uppercase tracking-tight">Laporan Bulanan</h1>

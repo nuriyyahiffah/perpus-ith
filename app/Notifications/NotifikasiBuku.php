@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+// Gunakan alias agar tidak bentrok dengan class Notification bawaan Laravel
 use App\Models\Notification as NotificationModel;
 
 class NotifikasiBuku extends Notification
@@ -14,7 +15,6 @@ class NotifikasiBuku extends Notification
 
     /**
      * Konstruktor untuk menerima data notifikasi
-     * $dataNotif harus berisi: judul, pesan, tipe, ikon, url_aksi
      */
     public function __construct($dataNotif)
     {
@@ -26,15 +26,15 @@ class NotifikasiBuku extends Notification
      */
     public function via($notifiable)
     {
-        // Kita panggil fungsi simpan ke tabel kustom kamu
+        // Panggil fungsi simpan ke tabel manual
         $this->simpanKeTabelKustom($notifiable);
 
-        // Return kosong agar tidak menggunakan sistem tabel default Laravel
+        // Kosongkan array agar tidak mencoba masuk ke tabel 'notifications' bawaan Laravel
         return [];
     }
 
     /**
-     * Logika untuk memasukkan data ke tabel notifications (HeidiSQL)
+     * Logika simpan ke database (HeidiSQL)
      */
     protected function simpanKeTabelKustom($notifiable)
     {
@@ -44,7 +44,7 @@ class NotifikasiBuku extends Notification
             'pesan'        => $this->dataNotif['pesan'] ?? '',
             'tipe'         => $this->dataNotif['tipe'] ?? 'info',
             'ikon'         => $this->dataNotif['ikon'] ?? 'bi-bell',
-            'sudah_dibaca' => false, // Default 0 (belum dibaca)
+            'sudah_dibaca' => 0, // Menggunakan 0 (integer) lebih aman daripada false
             'url_aksi'     => $this->dataNotif['url_aksi'] ?? null,
         ]);
     }

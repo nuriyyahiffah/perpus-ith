@@ -51,19 +51,18 @@
                     </p>
                 </div>
 
-                {{-- PERBAIKAN: Status Filter disesuaikan dengan Controller --}}
                 <div class="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
                     <a href="{{ route('shared.transaksi.index') }}"
                        class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all {{ !request('status') ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-600' }}">
-                        Semua
+                       Semua
                     </a>
                     <a href="{{ route('shared.transaksi.index', ['status' => 'dipinjam']) }}"
                        class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all {{ request('status') == 'dipinjam' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-600' }}">
-                        Dipinjam
+                       Dipinjam
                     </a>
                     <a href="{{ route('shared.transaksi.index', ['status' => 'dikembalikan']) }}"
                        class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all {{ request('status') == 'dikembalikan' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-600' }}">
-                        Kembali
+                       Kembali
                     </a>
                 </div>
             </header>
@@ -84,9 +83,8 @@
                         <tbody class="divide-y divide-slate-50">
                             @forelse($transaksi as $t)
                             @php
-                                // PERBAIKAN: Gunakan strtolower untuk keamanan pengecekan
                                 $statusLower = strtolower($t->status);
-                                $deadline = \Carbon\Carbon::parse($t->tgl_kembali);
+                                $deadline = \Carbon\Carbon::parse($t->tgl_tenggat);
                                 $isTerlambat = ($statusLower == 'dipinjam') && \Carbon\Carbon::now()->gt($deadline);
                             @endphp
 
@@ -107,7 +105,7 @@
                                     <div class="flex flex-col">
                                         <p class="font-bold text-slate-700 uppercase leading-tight text-xs mb-1">{{ $t->buku->judul ?? 'N/A' }}</p>
                                         <span class="text-[8px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100 italic uppercase tracking-widest w-fit">
-                                            NO. INDUK: {{ $t->no_induk }}
+                                           NO. INDUK: {{ $t->eksemplar->no_induk ?? '-' }}
                                         </span>
                                     </div>
                                 </td>
@@ -128,7 +126,6 @@
                                     @else
                                         <div class="flex flex-col items-center">
                                             @php
-                                                // PERBAIKAN: Gunakan strtolower pada kondisi kembali
                                                 $kondisi = strtolower($t->kondisi_kembali);
                                                 $color = match($kondisi) {
                                                     'rusak' => 'bg-orange-100 text-orange-700 border-orange-200',
@@ -154,16 +151,6 @@
                                                 <i class="bi bi-arrow-return-left group-hover:-translate-x-1 transition-transform"></i>
                                                 Kembalikan
                                             </button>
-
-                                            @if(!$t->is_extended && !$isTerlambat)
-                                                <form action="{{ route('shared.peminjaman.extend', $t->id) }}" method="POST" class="w-full max-w-[130px]">
-                                                    @csrf @method('PATCH')
-                                                    <button type="submit" onclick="return confirm('Perpanjang masa pinjam 7 hari?')"
-                                                        class="w-full bg-white border-2 border-blue-100 hover:border-blue-500 hover:text-blue-600 text-blue-500 px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2">
-                                                        <i class="bi bi-clock-history"></i> Perpanjang
-                                                    </button>
-                                                </form>
-                                            @endif
                                         @else
                                             <span class="text-[8px] font-black text-slate-300 uppercase italic">Selesai</span>
                                         @endif
@@ -186,7 +173,6 @@
                                                     <div>
                                                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Kembali</label>
                                                         <select name="kondisi_kembali" class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none text-sm appearance-none">
-                                                            {{-- PERBAIKAN: Gunakan value huruf kecil agar sinkron dengan ENUM --}}
                                                             <option value="baik">✅ Kembali Baik</option>
                                                             <option value="rusak">⚠️ Kondisi Rusak</option>
                                                             <option value="hilang">❌ Buku Hilang</option>

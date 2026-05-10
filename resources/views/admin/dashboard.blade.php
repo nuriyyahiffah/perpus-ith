@@ -25,22 +25,29 @@
 
     <main class="flex-1 p-8 lg:p-12 overflow-y-auto custom-scrollbar">
 
-        <header class="flex justify-between items-center mb-10">
+        {{-- HEADER SECTION --}}
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
             <div>
-                <h1 class="text-3xl font-[900] text-slate-800 uppercase italic tracking-tighter">Statistik <span class="text-blue-600">Sistem</span></h1>
-                <p class="text-slate-500 text-sm mt-1">Pantau aktivitas perpustakaan secara real-time.</p>
+                <h1 class="text-3xl font-[900] text-slate-800 uppercase italic tracking-tighter">
+                    Statistik <span class="text-blue-600">Sistem</span>
+                </h1>
+                <p class="text-slate-500 text-sm mt-1 font-medium">Dashboard Admin ITH Library — Pantau aktivitas secara real-time.</p>
             </div>
-            <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div class="text-right">
-                    <p class="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">Administrator</p>
-                    <p class="text-xs font-bold text-slate-700">{{ Auth::user()->name ?? 'Admin ITH' }}</p>
-                </div>
-                <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm">
-                    <i class="bi bi-person-badge-fill text-xl"></i>
+            
+            <div class="flex items-center gap-4">
+                {{-- TOMBOL INPUT PINJAMAN BARU --}}
+                <a href="{{ route('shared.peminjaman.create') }}" 
+                   class="inline-flex items-center gap-3 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-xl shadow-blue-600/20 active:scale-95 group">
+                    <i class="bi bi-plus-lg group-hover:rotate-90 transition-transform duration-300"></i>
+                    <span>Input Pinjaman Baru</span>
+                </a>
+
+                {{-- USER PROFILE --}}
                 </div>
             </div>
         </header>
 
+        {{-- STATS CARDS --}}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition group">
                 <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
@@ -76,6 +83,7 @@
         </div>
 
         <div class="grid lg:grid-cols-3 gap-8">
+            {{-- TABLE SECTION --}}
             <div class="lg:col-span-2">
                 <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
                     <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-white">
@@ -121,26 +129,37 @@
                 </div>
             </div>
 
+            {{-- SIDE INFO SECTION --}}
             <div class="space-y-8">
+                {{-- WARNING CARD --}}
                 <div class="bg-amber-50 border border-amber-100 rounded-[2rem] p-6 relative overflow-hidden shadow-sm shadow-amber-100/50">
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-200/30 rounded-full blur-2xl"></div>
                     <i class="bi bi-exclamation-triangle absolute -right-2 -bottom-2 text-7xl text-amber-200/40"></i>
+                    
                     <div class="relative z-10">
                         <div class="flex items-center gap-2 mb-4">
                             <div class="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center shadow-md shadow-amber-400/20">
                                 <i class="bi bi-megaphone-fill text-white text-xs"></i>
                             </div>
-                        
+                            <span class="text-[11px] font-black text-amber-700 uppercase tracking-widest">Peringatan Sistem</span>
+                        </div>
+                        <p class="text-[11px] text-amber-800 font-medium leading-relaxed italic">
+                            Segera lakukan penagihan kepada pengguna yang melewati batas pinjam lebih dari 7 hari untuk menjaga sirkulasi buku.
+                        </p>
+                    </div>
+                </div>
+
+                {{-- INFO CARD --}}
                 <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
                     <h2 class="font-black uppercase text-[10px] tracking-widest text-slate-400 mb-6">Informasi Aturan ITH</h2>
-                    <ul class="space-y-4">
-                        <li class="flex items-start gap-3 text-xs text-slate-600 italic leading-relaxed">
+                    <ul class="space-y-5">
+                        <li class="flex items-start gap-3 text-[11px] text-slate-600 italic leading-relaxed">
                             <i class="bi bi-info-circle-fill text-blue-500 mt-0.5"></i>
-                            <span>Akun tersuspend otomatis tidak bisa melakukan peminjaman.</span>
+                            <span>Akun tersuspend otomatis tidak bisa melakukan peminjaman baru sampai masalah diselesaikan.</span>
                         </li>
-                        <li class="flex items-start gap-3 text-xs text-slate-600 italic leading-relaxed">
+                        <li class="flex items-start gap-3 text-[11px] text-slate-600 italic leading-relaxed">
                             <i class="bi bi-check-circle-fill text-emerald-500 mt-0.5"></i>
-                            <span>Status dibuka kembali setelah buku diganti/denda lunas.</span>
+                            <span>Status suspend dapat dibuka kembali setelah buku dikembalikan/diganti atau denda lunas.</span>
                         </li>
                     </ul>
                 </div>

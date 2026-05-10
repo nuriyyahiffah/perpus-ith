@@ -3,65 +3,74 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Pegawai;
+use App\Models\User; // Gunakan Model User agar bisa login
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class PegawaiController extends Controller
 {
     /**
-     * Menampilkan halaman daftar pegawai.
-     * Halaman ini akan dipanggil oleh view yang ada di folder shared.
+     * Menampilkan daftar pegawai (Pustakawan/Admin)
      */
     public function index()
     {
-        // Mengambil data pegawai, diurutkan dari yang terbaru
-        $pegawai = Pegawai::latest()->get();
+        // Mengambil user yang rolenya adalah 'pustakawan' atau 'admin'
+        // Ini membedakan pegawai dengan 'mahasiswa' atau 'dosen'
+        $pegawai = User::whereIn('role', ['pustakawan', 'admin'])
+                       ->latest()
+                       ->get();
 
-        // Mengarahkan ke file resources/views/shared/pegawai/index.blade.php
         return view('shared.pegawai.index', compact('pegawai'));
     }
 
     /**
-     * Menyimpan data pegawai baru ke database.
+     * Menyimpan data pegawai ke tabel users
      */
     public function store(Request $request)
     {
         // Validasi input
         $request->validate([
-            'nip'     => 'required|unique:pegawais,nip',
+            'nip'     => 'required|unique:users,nomor_identitas',
             'nama'    => 'required|string|max:255',
-            'jabatan' => 'required',
-            'email'   => 'required|email|unique:pegawais,email',
-            'telepon' => 'nullable',
+            'jabatan' => 'required', // Input jabatan dari form akan masuk ke kolom 'role'
+            'email'   => 'required|email|unique:users,email',
         ], [
-            // Custom pesan error jika diperlukan
-            'nip.unique'   => 'NIP sudah terdaftar di sistem!',
-            'email.unique' => 'Email sudah digunakan oleh pegawai lain!',
+            'nip.unique'   => 'NIP sudah terdaftar!',
+            'email.unique' => 'Email sudah digunakan!',
         ]);
 
         try {
-            // Simpan data menggunakan mass assignment
-            Pegawai::create([
-                'nip'     => $request->nip,
-                'nama'    => $request->nama,
-                'jabatan' => $request->jabatan,
-                'email'   => $request->email,
-                'telepon' => $request->telepon,
+            DB::beginTransaction();
+
+            // Simpan ke tabel users
+            User::create([
+                'name'            => $request->nama,
+                'nomor_identitas' => $request->nip,
+                'email'           => $request->email,
+                // Masukkan nilai jabatan (pustakawan/admin) ke kolom role
+                'role'            => strtolower($request->jabatan), 
+                // Password otomatis menggunakan NIP
+                'password'        => Hash::make($request->nip),
+                'status_akun'     => 'aktif',
+                'is_active'       => true,
             ]);
 
+            DB::commit();
             return redirect()->back()->with('success', 'Data Pegawai berhasil ditambahkan ke SIPUSTAKA.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan data.');
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
     /**
-     * Menghapus data pegawai.
+     * Menghapus data pegawai
      */
     public function destroy($id)
     {
         try {
-            $pegawai = Pegawai::findOrFail($id);
+            $pegawai = User::findOrFail($id);
             $pegawai->delete();
 
             return redirect()->back()->with('success', 'Data Pegawai berhasil dihapus.');

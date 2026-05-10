@@ -4,19 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\User; // PENTING: Tambahkan ini agar relasi tidak error
 
 class Notification extends Model
 {
     use HasFactory;
 
+    // Pastikan nama tabel di database sesuai (jamak)
+    protected $table = 'notifications';
+
     protected $fillable = [
         'user_id',
-        'judul',        // Mengganti 'title'
-        'pesan',        // Mengganti 'message'
-        'tipe',         // Mengganti 'type'
-        'ikon',         // Mengganti 'icon'
-        'sudah_dibaca', // Mengganti 'read'
-        'url_aksi',     // Mengganti 'action_url'
+        'judul',        // Judul notifikasi
+        'pesan',        // Isi pesan
+        'tipe',         // success, warning, danger, info
+        'ikon',         // class icon (misal: bi-journal-check)
+        'sudah_dibaca', // status baca
+        'url_aksi',     // link tujuan jika diklik
     ];
 
     protected $casts = [
@@ -59,16 +63,16 @@ class Notification extends Model
     }
 
     /**
-     * Mendapatkan class warna berdasarkan tipe
+     * Mendapatkan class warna berdasarkan tipe (Utility untuk tampilan Blade)
      */
     public function getColorClass()
     {
-        return match($this->tipe) { // Menggunakan $this->tipe
+        return match($this->tipe) {
             'success' => 'bg-emerald-50 border-emerald-200 text-emerald-700',
             'warning' => 'bg-amber-50 border-amber-200 text-amber-700',
-            'danger' => 'bg-rose-50 border-rose-200 text-rose-700',
-            'info' => 'bg-blue-50 border-blue-200 text-blue-700',
-            default => 'bg-slate-50 border-slate-200 text-slate-700',
+            'danger'  => 'bg-rose-50 border-rose-200 text-rose-700',
+            'info'    => 'bg-blue-50 border-blue-200 text-blue-700',
+            default   => 'bg-slate-50 border-slate-200 text-slate-700',
         };
     }
 
@@ -77,12 +81,12 @@ class Notification extends Model
      */
     public function getBadgeColor()
     {
-        return match($this->tipe) { // Menggunakan $this->tipe
+        return match($this->tipe) {
             'success' => 'bg-emerald-500',
             'warning' => 'bg-amber-500',
-            'danger' => 'bg-rose-500',
-            'info' => 'bg-blue-500',
-            default => 'bg-slate-500',
+            'danger'  => 'bg-rose-500',
+            'info'    => 'bg-blue-500',
+            default   => 'bg-slate-500',
         };
     }
 }

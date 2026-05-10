@@ -34,15 +34,31 @@
                             Identitas Digital {{ Auth::user()->role }} ITH
                         </p>
                     </div>
-                    <a href="{{ url('/') }}" class="flex items-center text-xs font-bold text-slate-500 hover:text-[#2D3E50] transition">
+                    <a href="@if(Auth::user()->role === 'mahasiswa'){{ route('mahasiswa.beranda') }}@elseif(Auth::user()->role === 'dosen'){{ route('dosen.beranda') }}@else{{ url('/') }}@endif" class="flex items-center text-xs font-bold text-slate-500 hover:text-[#2D3E50] transition">
                         <i class="bi bi-arrow-left me-2"></i> KEMBALI KE BERANDA
                     </a>
                 </div>
 
+                {{-- NOTIFIKASI SUKSES --}}
                 @if(session('success'))
-                <div class="bg-emerald-500 text-white px-6 py-4 rounded-2xl mb-8 flex items-center shadow-lg shadow-emerald-200">
-                    <i class="bi bi-check-all text-2xl me-3"></i>
+                <div class="bg-emerald-500 text-white px-6 py-4 rounded-2xl mb-8 flex items-center shadow-lg shadow-emerald-200 animate-bounce">
+                    <i class="bi bi-check-circle-fill text-2xl me-3"></i>
                     <span class="text-sm font-bold uppercase tracking-wider">{{ session('success') }}</span>
+                </div>
+                @endif
+
+                {{-- NOTIFIKASI ERROR VALIDASI --}}
+                @if ($errors->any())
+                <div class="bg-rose-500 text-white px-6 py-4 rounded-2xl mb-8 shadow-lg shadow-rose-200">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-exclamation-triangle-fill text-xl me-2"></i>
+                        <span class="text-sm font-bold uppercase">Terjadi Kesalahan:</span>
+                    </div>
+                    <ul class="list-disc list-inside text-[11px] font-semibold uppercase tracking-wide opacity-90">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
                 @endif
 
@@ -56,7 +72,7 @@
                                 </div>
                                 <h3 class="text-xl font-black uppercase leading-tight mb-2">Informasi Akun</h3>
                                 <p class="text-[10px] text-slate-400 font-bold leading-relaxed uppercase italic">
-                                    Lengkapi nomor WhatsApp Anda untuk menerima notifikasi otomatis terkait peminjaman buku.
+                                    Lengkapi nomor WhatsApp Anda untuk menerima notifikasi otomatis terkait peminjaman buku secara real-time.
                                 </p>
                             </div>
                             <div class="text-[9px] font-bold text-slate-500 tracking-widest uppercase italic leading-loose">
@@ -110,26 +126,27 @@
                                         <div class="space-y-2">
                                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Pribadi</label>
                                             <div class="relative group">
-                                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+                                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
                                                     <i class="bi bi-envelope-at"></i>
                                                 </div>
-                                                <input type="email" name="email_pribadi" value="{{ old('email_pribadi', $user->email_pribadi) }}" placeholder="contoh@gmail.com" class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block pl-11 p-4 transition-all">
+                                                <input type="email" name="email_pribadi" value="{{ old('email_pribadi', $user->email_pribadi) }}" placeholder="contoh@gmail.com" class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block pl-11 p-4 transition-all">
                                             </div>
-                                            @error('email_pribadi') <p class="text-rose-500 text-[10px] font-bold mt-1 ml-1 uppercase">{{ $message }}</p> @enderror
                                         </div>
-                                        <div class="space-y-2">
+                                        <div class="space-y-2 md:col-span-2">
                                             <label class="text-[10px] font-black text-[#2D3E50] uppercase tracking-widest ml-1">Nomor WhatsApp (Aktif)</label>
-                                            <div class="relative">
-                                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">+62</span>
-                                                <input type="text" name="no_telp" value="{{ old('no_telp', $user->no_telp) }}" class="w-full pl-12 pr-5 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-sm transition-all" placeholder="8123456xxxx">
+                                            <div class="relative group">
+                                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                                                    <i class="bi bi-whatsapp"></i>
+                                                </div>
+                                                <input type="text" name="no_telp" inputmode="numeric" value="{{ old('no_telp', $user->no_telp) }}" class="w-full pl-11 pr-5 py-4 bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 block transition-all" placeholder="Contoh: 08123456789">
                                             </div>
-                                            @error('no_telp') <p class="text-rose-500 text-[9px] font-bold uppercase mt-1">{{ $message }}</p> @enderror
+                                            <p class="text-[9px] text-slate-400 font-bold italic ml-1">* Pastikan nomor aktif untuk menerima notifikasi pengembalian buku.</p>
                                         </div>
                                     </div>
 
                                     <div class="space-y-2">
                                         <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Alamat Tinggal / Domisili</label>
-                                        <textarea name="alamat" rows="2" class="w-full px-5 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-sm transition-all" placeholder="Masukkan alamat lengkap Anda...">{{ old('alamat', $user->alamat) }}</textarea>
+                                        <textarea name="alamat" rows="2" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block transition-all" placeholder="Masukkan alamat lengkap Anda...">{{ old('alamat', $user->alamat) }}</textarea>
                                     </div>
                                 </div>
 
@@ -141,27 +158,37 @@
                                     </div>
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="space-y-2">
-                                            <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Password Baru</label>
-                                            <div class="relative group">
-                                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-rose-500">
-                                                    <i class="bi bi-shield-lock"></i>
-                                                </div>
-                                                <input type="password" name="password" class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 block pl-11 p-4 transition-all" placeholder="Kosongkan jika tidak diubah">
-                                            </div>
-                                            @error('password') <p class="text-rose-500 text-[9px] font-bold uppercase mt-1">{{ $message }}</p> @enderror
-                                        </div>
+    {{-- Password Baru --}}
+    <div class="space-y-2">
+        <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Password Baru</label>
+        <div class="relative group">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-rose-500">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+            <input type="password"
+                   name="password"
+                   autocomplete="new-password"
+                   class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 block pl-11 p-4 transition-all"
+                   placeholder="Kosongkan jika tidak diubah">
+        </div>
+    </div>
 
-                                        <div class="space-y-2">
-                                            <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Konfirmasi Password</label>
-                                            <div class="relative group">
-                                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-rose-500">
-                                                    <i class="bi bi-shield-check"></i>
-                                                </div>
-                                                <input type="password" name="password_confirmation" class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 block pl-11 p-4 transition-all" placeholder="Ulangi password baru">
-                                            </div>
-                                        </div>
-                                    </div>
+    {{-- Konfirmasi Password --}}
+    <div class="space-y-2">
+        <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Konfirmasi Password</label>
+        <div class="relative group">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-rose-500">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <input type="password"
+                   name="password_confirmation"
+                   autocomplete="new-password"
+                   class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 block pl-11 p-4 transition-all"
+                   placeholder="Ulangi password baru">
+        </div>
+    </div>
+</div>
+
                                 </div>
 
                                 <div class="pt-4">
@@ -171,14 +198,13 @@
                                 </div>
                             </form>
 
-                            {{-- Bantuan WhatsApp Admin --}}
                             <div class="mt-8 text-center border-t border-slate-50 pt-6">
-                                <a href="https://wa.me/628XXXXXXXXXX?text=Halo%20Admin%20SIPUSTAKA,%20saya%20lupa%20password%20dengan%20NIM:%20{{ $user->nomor_identitas }}" 
+                                <a href="https://wa.me/628XXXXXXXXXX?text=Halo%20Admin%20SIPUSTAKA,%20saya%20lupa%20password%20dengan%20Identitas:%20{{ $user->nomor_identitas }}"
                                    target="_blank" class="text-[10px] font-black text-slate-400 hover:text-blue-600 transition uppercase tracking-[0.2em]">
-                                   Lupa Password? <span class="text-blue-500">Hubungi Admin via WhatsApp</span>
+                                    Lupa Password? <span class="text-blue-500">Hubungi Admin via WhatsApp</span>
                                 </a>
                             </div>
-                        </div> 
+                        </div>
                     </div>
                 </div>
 
@@ -189,6 +215,71 @@
             </div>
         </main>
     </div>
+
+    <script>
+        // Validasi nomor WhatsApp - hanya angka yang dibolehkan
+        const noTelpInput = document.querySelector('input[name="no_telp"]');
+
+        if (noTelpInput) {
+            noTelpInput.addEventListener('input', function(e) {
+                // Simpan posisi cursor
+                const cursorPos = this.selectionStart;
+
+                // Ambil nilai asli
+                const originalValue = this.value;
+
+                // Hapus semua karakter yang bukan angka
+                this.value = this.value.replace(/[^0-9]/g, '');
+
+                // Jika ada perubahan (ada karakter non-angka), tampilkan notifikasi
+                if (originalValue !== this.value && originalValue.length > 0) {
+                    showNotification('Hanya angka yang dibolehkan!', 'error');
+                }
+
+                // Restore posisi cursor
+                this.selectionStart = this.selectionEnd = cursorPos - 1;
+            });
+
+            // Validasi on blur untuk pesan lebih detail
+            noTelpInput.addEventListener('blur', function() {
+                if (this.value && !/^\d{9,15}$/.test(this.value)) {
+                    showNotification('Nomor WhatsApp harus 9-15 digit angka', 'error');
+                } else if (this.value) {
+                    showNotification('Nomor WhatsApp valid', 'success');
+                }
+            });
+        }
+
+        // Fungsi untuk menampilkan notifikasi
+        function showNotification(message, type = 'info') {
+            // Hapus notifikasi sebelumnya jika ada
+            const existingNotif = document.getElementById('validation-notification');
+            if (existingNotif) {
+                existingNotif.remove();
+            }
+
+            // Buat elemen notifikasi baru
+            const notification = document.createElement('div');
+            notification.id = 'validation-notification';
+
+            const bgColor = type === 'error' ? 'bg-rose-500' : 'bg-emerald-500';
+            const icon = type === 'error' ? 'bi-exclamation-circle-fill' : 'bi-check-circle-fill';
+
+            notification.innerHTML = `
+                <div class="${bgColor} text-white px-6 py-4 rounded-2xl flex items-center shadow-lg fixed top-6 right-6 z-50 animate-bounce" style="max-width: 350px;">
+                    <i class="bi ${icon} text-xl me-3"></i>
+                    <span class="text-sm font-bold uppercase tracking-wider">${message}</span>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Hapus notifikasi setelah 3 detik
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
 
 </body>
 </html>

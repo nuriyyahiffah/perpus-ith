@@ -130,15 +130,16 @@ class BukuController extends Controller
      * PROSES SIMPAN BUKU
      */
     public function store(Request $request) 
-    {
-        $request->validate([
-            'judul' => 'required|string|max:255',
-            'kode_buku' => 'required|unique:buku,kode_buku',
-            'gambar_buku' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-            'sinopsis' => 'required|string',
-            'jumlah_halaman' => 'nullable|numeric', // Tambahkan validasi angka
-            'stok' => 'required|integer',
-        ]);
+{
+    $request->validate([
+        'judul' => 'required|string|max:255',
+        'kode_buku' => 'required', // Sekarang boleh sama
+        'gambar_buku' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        'sinopsis' => 'required|string',
+        'jumlah_halaman' => 'nullable|numeric',
+        'stok' => 'required|integer',
+        'no_induk' => 'required|unique:eksemplar,no_induk', // Tambahkan ini agar nomor induk tetap unik
+    ]);
 
         $namaGambar = time() . '_cover.' . $request->gambar_buku->extension();
         $request->gambar_buku->move(public_path('images'), $namaGambar);

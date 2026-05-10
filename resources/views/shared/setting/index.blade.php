@@ -75,11 +75,13 @@
             <button @click="tab = 'profil'" :class="tab === 'profil' ? 'bg-[#2D3E50] text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-white'" class="px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center">
                 <i class="bi bi-building-fill-gear me-2"></i> Profil
             </button>
-            <button @click="tab = 'aturan'" :class="tab === 'aturan' ? 'bg-[#2D3E50] text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-white'" class="px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center">
-                <i class="bi bi-shield-lock-fill me-2"></i> Aturan
-            </button>
+
             <button @click="tab = 'api'" :class="tab === 'api' ? 'bg-[#2D3E50] text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-white'" class="px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center">
                 <i class="bi bi-cpu-fill me-2"></i> API & Notifikasi
+            </button>
+
+            <button @click="tab = 'backup'" :class="tab === 'backup' ? 'bg-[#2D3E50] text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-white'" class="px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center">
+                <i class="bi bi-database-fill-down me-2"></i> Backup Data
             </button>
         </div>
 
@@ -106,35 +108,6 @@
                         <div class="md:col-span-2 space-y-3">
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center"><i class="bi bi-geo-alt me-2"></i> Alamat Lengkap</label>
                             <textarea name="alamat" rows="3" class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl setting-input outline-none transition font-bold text-slate-700">{{ $settings['alamat'] ?? '' }}</textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- TAB: ATURAN --}}
-            <div x-show="tab === 'aturan'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95">
-                <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden card-setting">
-                    <div class="p-8 border-b border-slate-50 bg-gradient-to-r from-slate-50 to-white">
-                        <h3 class="font-black text-[#2D3E50] uppercase text-xs tracking-[0.3em] flex items-center">
-                            <span class="w-8 h-1 bg-orange-400 rounded-full me-3"></span> Kebijakan Peminjaman
-                        </h3>
-                    </div>
-                    <div class="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="p-8 bg-gradient-to-br from-orange-50/50 to-white rounded-[2rem] border border-orange-100/50 relative overflow-hidden group">
-                            <i class="bi bi-book absolute -right-4 -bottom-4 text-6xl text-orange-100 group-hover:scale-110 transition-transform"></i>
-                            <label class="text-[9px] font-black text-orange-400 uppercase tracking-widest block mb-5">Maks Peminjaman</label>
-                            <div class="flex items-end gap-3 relative z-10">
-                                <input type="number" name="max_buku" value="{{ $settings['max_buku'] ?? 3 }}" class="w-full text-4xl font-black bg-transparent outline-none text-[#2D3E50]">
-                                <span class="text-[10px] font-bold text-slate-400 mb-2">BUKU</span>
-                            </div>
-                        </div>
-                        <div class="p-8 bg-gradient-to-br from-blue-50/50 to-white rounded-[2rem] border border-blue-100/50 relative overflow-hidden group">
-                            <i class="bi bi-calendar-check absolute -right-4 -bottom-4 text-6xl text-blue-100 group-hover:scale-110 transition-transform"></i>
-                            <label class="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-5">Batas Waktu</label>
-                            <div class="flex items-end gap-3 relative z-10">
-                                <input type="number" name="durasi_pinjam" value="{{ $settings['durasi_pinjam'] ?? 7 }}" class="w-full text-4xl font-black bg-transparent outline-none text-[#2D3E50]">
-                                <span class="text-[10px] font-bold text-slate-400 mb-1 text-xs font-black">HARI</span>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -167,8 +140,6 @@
                         <div class="space-y-6">
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">Fitur Notifikasi Otomatis</label>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                
-                                {{-- Pengingat Fleksibel --}}
                                 <div class="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
                                     <div class="flex items-center space-x-3">
                                         <i class="bi bi-alarm text-blue-500 text-lg"></i>
@@ -180,8 +151,18 @@
                                         <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hari Jatuh Tempo</span>
                                     </div>
                                 </div>
+                                <div class="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+    <div class="flex items-center space-x-3">
+        <i class="bi bi-clock-history text-blue-500 text-lg"></i>
+        <span class="text-xs font-bold text-slate-700">Waktu Pengiriman Notif</span>
+    </div>
+    <div class="flex items-center gap-3">
+        <input type="time" name="notif_time" value="{{ $settings['notif_time'] ?? '08:00' }}" 
+            class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700">
+    </div>
+    <p class="text-[8px] text-slate-400 font-bold uppercase tracking-tighter italic">*Notifikasi otomatis akan dikirim pada jam ini</p>
+</div>
 
-                                {{-- Notifikasi Kembali --}}
                                 <div class="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100">
                                     <div class="flex items-center space-x-3">
                                         <i class="bi bi-chat-left-check text-emerald-500 text-lg"></i>
@@ -195,15 +176,45 @@
                                         <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                                     </label>
                                 </div>
-
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- ACTION BUTTON --}}
-            <div class="mt-12 flex justify-end">
+            {{-- TAB: BACKUP DATA --}}
+            <div x-show="tab === 'backup'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95">
+                <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden card-setting">
+                    <div class="p-8 border-b border-slate-50 bg-slate-50/50">
+                        <h3 class="font-black text-[#2D3E50] uppercase text-xs tracking-[0.3em] flex items-center">
+                            <span class="w-8 h-1 bg-amber-500 rounded-full me-3"></span> Pemeliharaan Database
+                        </h3>
+                    </div>
+                    <div class="p-10">
+                        <div class="flex items-center gap-8 bg-amber-50 p-8 rounded-[2rem] border border-amber-100">
+                            <div class="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-amber-500 shadow-sm shrink-0">
+                                <i class="bi bi-shield-lock-fill text-4xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-black text-amber-900 uppercase tracking-wide mb-1">Backup Database Berkala</h4>
+                                <p class="text-xs text-amber-800/70 leading-relaxed font-medium">Amankan data peminjaman, buku, dan anggota SIPUSTAKA secara rutin. File backup akan diunduh dalam format <span class="font-bold">.sql</span>.</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-10 flex flex-col items-center justify-center py-10 border-2 border-dashed border-slate-100 rounded-[2rem]">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Klik tombol di bawah untuk mulai ekspor</p>
+                            
+                            <a href="{{ route('shared.backup.download') }}" class="flex items-center gap-3 bg-white border-2 border-[#2D3E50] text-[#2D3E50] px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#2D3E50] hover:text-white transition-all duration-300 shadow-lg shadow-slate-200">
+                                <i class="bi bi-cloud-arrow-down-fill text-lg"></i>
+                                Unduh Database (.sql)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ACTION BUTTON (Disembunyikan jika di tab backup agar tidak bingung) --}}
+            <div class="mt-12 flex justify-end" x-show="tab !== 'backup'">
                 <button type="submit" class="group relative overflow-hidden bg-[#2D3E50] text-white px-16 py-5 rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-blue-900/30">
                     <div class="relative z-10 flex items-center">
                         <i class="bi bi-save2-fill me-3 text-lg animate-bounce"></i>

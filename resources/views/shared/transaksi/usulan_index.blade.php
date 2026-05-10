@@ -12,16 +12,24 @@
 <body class="antialiased">
 
     {{-- NAVBAR SEDERHANA --}}
-    <nav class="bg-[#2D3E50] text-white p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center px-4">
-            <div class="flex items-center space-x-3">
-                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo ITH" class="h-10">
-                <span class="text-[10px] font-bold uppercase">Manajemen<br><span class="text-yellow-400">Transaksi ITH</span></span>
+    <nav class="bg-[#1E293B]/90 backdrop-blur-md text-white py-4 sticky top-0 z-50 border-b border-white/10">
+        <div class="container mx-auto flex justify-between items-center px-6">
+            <div class="flex items-center space-x-4">
+                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo ITH" class="h-10 brightness-110">
+                <div class="hidden sm:block border-l border-white/20 pl-4">
+                    <span class="text-[11px] font-black leading-none uppercase tracking-tighter block">
+                        Manajemen<br><span class="text-yellow-400">Usulan Buku ITH</span>
+                    </span>
+                </div>
             </div>
-            <a href="{{ route('beranda') }}" class="text-[10px] font-bold uppercase hover:text-yellow-400 flex items-center gap-2">
-                <i class="bi bi-house-door"></i> Dashboard
-            </a>
-        </div>
+        <a href="{{ 
+    Auth::user()->role === 'admin' ? route('admin.dashboard') : 
+    (Auth::user()->role === 'pustakawan' ? route('pustakawan.dashboard') : 
+    (in_array(Auth::user()->role, ['dosen', 'kaprodi']) ? route('dosen.beranda') : 
+    route('mahasiswa.beranda'))) 
+}}" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-300 hover:text-white transition">
+    Dashboard
+</a>  </div>
     </nav>
 
     <div class="container mx-auto py-10 px-6">
@@ -73,10 +81,10 @@
 
                         {{-- KOLOM AKSI --}}
                         <td class="px-8 py-6">
-                            <form action="{{ route('usulan.updateStatus', $u->id) }}" method="POST" class="flex flex-col gap-2">
+                            <form action="{{ route('shared.usulan.konfirmasi', $u->id) }}" method="POST" class="flex flex-col gap-2">
                                 @csrf
                                 @method('PATCH')
-                                <select name="status" onchange="this.form.submit()" 
+                                <select name="status" onchange="this.form.submit()"
                                     class="text-[9px] font-black uppercase border-none rounded-xl px-4 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500
                                     {{ $u->status == 'pending' ? 'bg-amber-50 text-amber-600' : '' }}
                                     {{ $u->status == 'disetujui' ? 'bg-emerald-50 text-emerald-600' : '' }}

@@ -23,12 +23,17 @@ class Peminjaman extends Model
         'kondisi_kembali',
         'denda_fisik',
         'catatan_kondisi',
-        'status'
+        'status',
+        'wa_notif_return_sent',
+        'wa_notif_return_sent_at'
     ];
 
     // Relasi ke User
     public function user() {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id')->withDefault([
+            'no_telp' => '000000000000', // Nomor default jika user tidak ditemukan
+            'name' => 'User Tidak Ditemukan'
+        ]);
     }
 
     public function buku()

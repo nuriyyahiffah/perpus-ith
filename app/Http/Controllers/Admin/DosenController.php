@@ -14,59 +14,69 @@ class DosenController extends Controller
 {
     public function index()
     {
-        $dosen = User::where('role', 'dosen')->latest()->get();
-        $kategori = KategoriAnggota::all();
-        return view('shared.dosen.index', compact('dosen', 'kategori'));
-    }
+        // Mengambil data user yang memiliki role 'dosen' atau 'kaprodi'
+        // Diurutkan berdasarkan nama agar rapi
+        $dosen = User::whereIn('role', ['dosen', 'kaprodi'])
+                      ->orderBy('name', 'asc')
+                      ->get();
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'nomor_identitas' => 'required|unique:users,nomor_identitas',
-            'email' => 'required|email|unique:users,email',
-            'prodi' => 'required',
-        ], [
-            'nomor_identitas.unique' => 'NIP/NIDN SUDAH TERDAFTAR DI SISTEM.',
-            'email.unique' => 'EMAIL SUDAH DIGUNAKAN.',
-        ]);
-
+        // Mengambil data kategori untuk dropdown jika diperlukan di modal tambah
         $kategoriDosen = KategoriAnggota::where('nama_kategori', 'Dosen')->first();
 
-        User::create([
-            'name'            => $request->name,
-            'nomor_identitas' => $request->nomor_identitas,
-            'email'           => $request->email,
-            'password'        => Hash::make($request->nomor_identitas),
-            'role'            => 'dosen',
-            'prodi'           => $request->prodi,
-            'status_akun'     => 'aktif',
-            'kategori_anggota_id' => $kategoriDosen ? $kategoriDosen->id : null,
-        ]);
-
-        return redirect()->back()->with('success', 'DATA DOSEN BERHASIL DITAMBAHKAN!');
+        // Mengarahkan ke file view (Pastikan file ini ada di folder resources/views/admin/dosen/)
+        return view('shared.dosen.index', compact('dosen', 'kategoriDosen'));
     }
+
+
+   public function store(Request $request)
+{
+    // 1. Validasi dengan aturan yang benar
+    $request->validate([
+        'name'            => 'required|string|max:255|unique:users,name',
+        'nomor_identitas' => 'required|unique:users,nomor_identitas',
+        'email'           => 'required|email|unique:users,email',
+        'prodi'           => 'required',
+        'role'            => 'required|in:dosen,kaprodi', // Gunakan 'in' untuk membatasi pilihan
+        'no_telp'         => 'nullable|string|max:15',
+    ], [
+        'name.unique'            => 'NAMA DOSEN SUDAH TERDAFTAR.',
+        'nomor_identitas.unique' => 'NIP/NIDN SUDAH TERDAFTAR.',
+        'email.unique'           => 'EMAIL SUDAH DIGUNAKAN.',
+    ]);
+
+    // 2. Cari ID Kategori untuk Dosen
+    $kategoriDosen = KategoriAnggota::where('nama_kategori', 'Dosen')->first();
+
+    // 3. Simpan data ke database
+    User::create([
+        'name'                => $request->name,
+        'nomor_identitas'     => $request->nomor_identitas,
+        'email'               => $request->email,
+        'password'            => Hash::make(trim($request->nomor_identitas)),
+        'role'                => $request->role, // Ini akan menyimpan 'kaprodi' atau 'dosen'
+        'prodi'               => $request->prodi,
+        'no_telp'             => $request->no_telp,
+        'status_akun'         => 'aktif',
+        'kategori_anggota_id' => $kategoriDosen ? $kategoriDosen->id : null,
+    ]);
+
+    return redirect()->back()->with('success', 'DATA PENGAJAR BERHASIL DITAMBAHKAN!');
+}
+
+
 
     public function update(Request $request, $id)
     {
-        // Jurus 1: Definisikan tipe secara eksplisit
-        /** @var \App\Models\User $user */
         $user = User::findOrFail($id);
 
         $request->validate([
-            'name' => 'required|string|max:255',
-            'nomor_identitas' => [
-                'required',
-                // Jurus 2: Gunakan variabel $id langsung dari parameter fungsi (ini pasti tidak merah)
-                Rule::unique('users')->ignore($id), 
-            ],
-            'email' => [
-                'required',
-                'email',
-                Rule::unique('users')->ignore($id),
-            ],
+            'name' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($id)],
+            'nomor_identitas' => ['required', Rule::unique('users')->ignore($id)],
+            'email' => ['required', 'email', Rule::unique('users')->ignore($id)],
             'prodi' => 'required',
+            'role' => 'required|in:dosen,kaprodi', // Pastikan role juga divalidasi saat update
         ], [
+            'name.unique'            => 'NAMA DOSEN INI SUDAH ADA DI DATA LAIN.',
             'nomor_identitas.unique' => 'NIP/NIDN INI SUDAH DIGUNAKAN DOSEN LAIN.',
         ]);
 
@@ -75,18 +85,20 @@ class DosenController extends Controller
         $user->email = $request->email;
         $user->prodi = $request->prodi;
 
+        // PERBAIKAN 3: Update role agar bisa berubah dari Dosen ke Kaprodi atau sebaliknya
+        $user->role = $request->role;
+
         if ($request->has('reset_password')) {
             $user->password = Hash::make($request->nomor_identitas);
         }
 
         $user->save();
 
-        return redirect()->back()->with('success', 'DATA DOSEN BERHASIL DIPERBARUI!');
+        return redirect()->back()->with('success', 'DATA BERHASIL DIPERBARUI!');
     }
 
     public function destroy($id)
     {
-        // Jurus 3: Hindari menghapus akun sendiri — bandingkan dengan Auth::id()
         if ((int) $id === Auth::id()) {
             return redirect()->back()->with('error', 'ANDA TIDAK BISA MENGHAPUS AKUN SENDIRI!');
         }
@@ -106,17 +118,14 @@ class DosenController extends Controller
 
         $user = Auth::user();
 
-        // Cek apakah password lama benar
         if (!Hash::check($request->current_password, $user->password)) {
             return back()->with('error', 'PASSWORD LAMA TIDAK SESUAI!');
         }
 
-        // Update ke password baru
         $user->update([
             'password' => Hash::make($request->new_password)
         ]);
 
         return back()->with('success', 'PASSWORD BERHASIL DIPERBARUI!');
     }
-
 }

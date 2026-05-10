@@ -19,6 +19,7 @@
         .table thead { background-color: #f8f9fa; }
         .btn-remove { color: #dc3545; transition: 0.2s; border: none; background: none; }
         .btn-remove:hover { color: #a71d2a; transform: scale(1.1); }
+        .badge-role { font-size: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -38,13 +39,13 @@
                     <h5 class="mb-0"><i class="fas fa-edit me-2"></i> Form Transaksi Peminjaman</h5>
                 </div>
                 <div class="card-body p-4">
-                    <form action="{{ route('shared.peminjaman.store') }}" method="POST" id="formPeminjaman">
+                    <form action="{{ route('shared.transaksi.store') }}" method="POST" id="formPeminjaman">
                         @csrf
                         
                         <div class="mb-4">
-                            <label class="form-label fw-bold">Peminjam (Mahasiswa/Siswa)</label>
+                            <label class="form-label fw-bold text-dark">Peminjam (Mahasiswa / Dosen / Kaprodi)</label>
                             <div class="input-group">
-                                <input type="text" id="keyword_user" class="form-control" placeholder="Masukkan NIM atau Nama..." style="height: 45px;">
+                                <input type="text" id="keyword_user" class="form-control" placeholder="Masukkan NIM/NIP atau Nama..." style="height: 45px;">
                                 <button class="btn btn-primary px-4" type="button" id="btnCekUser">
                                     <i class="fas fa-search me-1"></i> Cek Data
                                 </button>
@@ -53,9 +54,17 @@
                             
                             <div id="user_info_box" class="info-box mt-3">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 id="res_name" class="fw-bold mb-0 text-dark">-</h6>
-                                        <small id="res_nim" class="text-muted">-</small>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <div>
+                                            <h6 id="res_name" class="fw-bold mb-0 text-dark">-</h6>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <small id="res_nim" class="text-muted small">-</small>
+                                                <span id="res_role" class="badge bg-secondary badge-role">-</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <span id="res_status" class="badge rounded-pill px-3 bg-success">AKTIF</span>
                                 </div>
@@ -99,14 +108,14 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold text-dark">Tenggat Pengembalian</label>
-                                <input type="date" name="tgl_kembali" class="form-control" value="{{ date('Y-m-d', strtotime('+7 days')) }}" required style="height: 45px;">
-                                <small class="text-muted">Standar peminjaman adalah 7 hari.</small>
+                                <input type="date" name="tgl_tenggat" class="form-control" value="{{ date('Y-m-d', strtotime('+7 days')) }}" required style="height: 45px;">
+                                <small class="text-muted italic">Masa pinjam default adalah 7 hari.</small>
                             </div>
                         </div>
 
                         <div class="mt-4 d-flex justify-content-between align-items-center">
-                            <a href="{{ route('shared.peminjaman.index') }}" class="btn btn-outline-secondary px-4">
-                                <i class="fas fa-arrow-left me-1"></i> Batal
+                            <a href="{{ route('shared.transaksi.index') }}" class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-arrow-left me-1"></i> Kembali
                             </a>
                             <button type="submit" id="btnSimpan" class="btn btn-primary btn-lg px-5 fw-bold" disabled>
                                 <i class="fas fa-save me-2"></i> Simpan Transaksi
@@ -125,46 +134,63 @@
 
 <script>
 $(document).ready(function() {
-    
     const MAX_PINJAM = 3;
 
-    // 1. Logika Cek Mahasiswa
+    // 1. CEK USER
     $('#btnCekUser').click(function() {
         let kw = $('#keyword_user').val();
-        if(kw.length < 3) return alert('Ketik minimal 3 karakter untuk pencarian');
-        
-        $.get("{{ route('shared.getUsers') }}", { nim: kw }, function(res) {
-            if(res.success) {
-                $('#user_id_hidden').val(res.id);
-                $('#res_name').text(res.name);
-                $('#res_nim').text('Identitas: ' + res.nomor_identitas);
-                $('#user_info_box').fadeIn();
-                validateForm();
-            } else {
-                alert('Peminjam tidak ditemukan!');
-                $('#user_id_hidden').val('');
-                $('#user_info_box').hide();
+        if(kw.length < 2){
+            alert('Ketik minimal 2 karakter untuk pencarian');
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('shared.getUsers') }}", 
+            method: "GET",
+            data: { nim: kw },
+            success: function(res) {
+                if(res.success) {
+                    $('#user_id_hidden').val(res.id);
+                    $('#res_name').text(res.name);
+                    $('#res_nim').text('ID: ' + res.nomor_identitas);
+                    $('#res_role').text(res.role).show();
+                    $('#res_status').text(res.status);
+                    $('#user_info_box').fadeIn();
+
+                    if(res.role.toLowerCase() === 'mahasiswa') {
+                        $('#res_role').removeClass('bg-secondary').addClass('bg-info text-dark');
+                    } else {
+                        $('#res_role').removeClass('bg-secondary').addClass('bg-warning text-dark');
+                    }
+                } else {
+                    alert('Data peminjam tidak ditemukan!');
+                    $('#user_id_hidden').val('');
+                    $('#user_info_box').hide();
+                }
                 validateForm();
             }
         });
     });
 
-    // 2. Select2 Buku
+    // 2. SELECT2 CARI BUKU
     $('#search_buku_ajax').select2({
         theme: 'bootstrap-5',
-        placeholder: 'Ketik judul buku di sini...',
+        placeholder: 'Ketik judul buku...',
         minimumInputLength: 1,
         ajax: {
             url: "{{ route('shared.getBooks') }}",
             dataType: 'json',
             delay: 250,
+            data: function (params) {
+                return { q: params.term };
+            },
             processResults: function (data) {
                 return { results: data };
             }
         }
     });
 
-    // 3. Ketika Buku Dipilih
+    // 3. KETIKA BUKU DIPILIH
     $('#search_buku_ajax').on('select2:select', function (e) {
         let data = e.params.data;
         let currentRows = $('#list_buku_pinjam tr').not('#empty_row').length;
@@ -176,7 +202,7 @@ $(document).ready(function() {
         }
 
         if ($(`#row_${data.id}`).length > 0) {
-            alert('Buku ini sudah ada dalam daftar.');
+            alert('Buku ini sudah ada dalam daftar pinjam.');
             $(this).val(null).trigger('change');
             return;
         }
@@ -184,12 +210,10 @@ $(document).ready(function() {
         $('#empty_row').hide();
         let uniqueSelectId = 'select_no_induk_' + data.id;
 
-        // PERBAIKAN: Menghapus data.sinopsis yang menyebabkan error
         let row = `
             <tr id="row_${data.id}">
                 <td>
                     <div class="fw-bold text-dark">${data.text}</div>
-                    <input type="hidden" name="buku_id[]" value="${data.id}">
                 </td>
                 <td class="text-center">
                     <span class="badge bg-light text-primary border border-primary">${data.stok} Eks</span>
@@ -209,8 +233,9 @@ $(document).ready(function() {
 
         $('#list_buku_pinjam').append(row);
 
-        // Ambil Eksemplar
-        let urlEksemplar = "{{ route('shared.getEksemplar', ':id') }}".replace(':id', data.id);
+        // Ambil Eksemplar - Menggunakan placeholder :id agar route Laravel tidak error
+        let urlEksemplar = "{{ route('shared.getEksemplar', ':id') }}";
+        urlEksemplar = urlEksemplar.replace(':id', data.id);
 
         $.get(urlEksemplar, function(res) {
             let options = '<option value="">-- Pilih No. Induk --</option>';
@@ -243,5 +268,6 @@ $(document).ready(function() {
     };
 });
 </script>
+
 </body>
 </html>

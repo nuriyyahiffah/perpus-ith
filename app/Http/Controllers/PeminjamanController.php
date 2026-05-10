@@ -8,306 +8,261 @@ use App\Models\User;
 use App\Models\Buku;
 use App\Models\Eksemplar;
 use App\Models\Setting;
-use App\Models\Notification; // PENTING: Untuk notifikasi Web
+use App\Models\Notification;
 use Carbon\Carbon;
-use App\Traits\WhatsappTrait;
-use App\Notifications\NotifikasiBuku;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
 class PeminjamanController extends Controller
 {
-    use WhatsappTrait;
-
     /**
-     * Menampilkan daftar transaksi
+     * Menampilkan riwayat transaksi dengan filter status
      */
     public function index(Request $request)
     {
-        $transaksi = Peminjaman::with(['user', 'buku'])
-            ->when($request->status, function ($query, $status) {
-                return $query->where('status', strtolower($status));
-            })
-            ->latest()
-            ->get();
+        $status = $request->get('status');
+
+        $query = Peminjaman::with(['user', 'buku', 'eksemplar']);
+
+        // Filter berdasarkan status (Dipinjam / Dikembalikan)
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $transaksi = $query->latest()->paginate(10)->withQueryString();
 
         return view('shared.transaksi.index', compact('transaksi'));
     }
 
     /**
-     * PROSES PENGEMBALIAN (Otomatis Update Stok & Eksemplar + Notifikasi Web & WA)
+     * Menampilkan form peminjaman baru
      */
-    public function kembalikan(Request $request, $id)
-    {
-        $request->validate([
-            'kondisi_kembali' => 'required|in:Baik,Rusak,Hilang',
-            'denda_fisik'     => 'nullable|numeric|min:0',
-            'catatan_kondisi' => 'nullable|string'
-        ]);
-
-        try {
-            $peminjaman = Peminjaman::with(['user', 'buku'])->findOrFail($id);
-
-            DB::transaction(function () use ($request, $peminjaman) {
-                // 1. Update Status Transaksi
-                $peminjaman->update([
-                    'status'           => 'dikembalikan',
-                    'tgl_kembali'      => Carbon::now(),
-                    'kondisi_kembali'  => $request->kondisi_kembali,
-                    'denda_fisik'      => $request->denda_fisik ?? 0,
-                    'catatan_kondisi'  => $request->catatan_kondisi,
-                ]);
-
-                // 2. Update Status Eksemplar (Case Sensitive Handling)
-                $eksemplar = Eksemplar::find($peminjaman->eksemplar_id);
-                if ($eksemplar) {
-                    $kondisi = strtolower($request->kondisi_kembali);
-                    $statusFisik = ($kondisi == 'hilang') ? 'hilang' :
-                                  (($kondisi == 'rusak') ? 'rusak' : 'tersedia');
-
-                    $eksemplar->update(['status' => $statusFisik]);
-
-                    // 3. Sinkronisasi Stok Buku
-                    $buku = $eksemplar->buku;
-                    if ($buku) {
-                        $jumlahTersedia = Eksemplar::where('buku_id', $buku->id)
-                                                   ->where('status', 'tersedia')
-                                                   ->count();
-                        $buku->update(['stok' => $jumlahTersedia]);
-                    }
-                }
-
-                // 4. NOTIFIKASI WEB (Simpan ke tabel notifications)
-                Notification::create([
-                    'user_id'      => $peminjaman->user_id,
-                    'judul'        => 'Pengembalian Berhasil',
-                    'pesan'        => 'Buku "' . $peminjaman->buku->judul . '" telah berhasil dikembalikan dalam kondisi ' . $request->kondisi_kembali . '.',
-                    'tipe'         => 'success',
-                    'ikon'         => 'bi-journal-check',
-                    'sudah_dibaca' => false,
-                ]);
-            });
-
-            // --- NOTIFIKASI WHATSAPP (Di luar DB Transaction) ---
-            $notifSetting = Setting::where('key', 'notif_return')->first();
-            $phone = $peminjaman->user->no_hp ?? $peminjaman->user->no_telp;
-
-            if ($notifSetting && $notifSetting->value == '1' && $phone) {
-                $namaPerpus = Setting::where('key', 'nama_perpus')->first()->value ?? 'SIPUSTAKA ITH';
-
-                $pesan = "✅ *PENGEMBALIAN BUKU BERHASIL*\n\n" .
-                         "Halo *{$peminjaman->user->name}*,\n" .
-                         "Buku berikut telah diterima kembali:\n\n" .
-                         "📖 Judul: *{$peminjaman->buku->judul}*\n" .
-                         "📅 Tgl Kembali: " . Carbon::now()->format('d-m-Y H:i') . " WITA\n" .
-                         "🛡️ Kondisi: " . ucfirst($request->kondisi_kembali) . "\n" .
-                         "💰 Denda Fisik: Rp " . number_format($request->denda_fisik ?? 0, 0, ',', '.') . "\n\n" .
-                         "Terima kasih telah tertib mengembalikan buku.\n" .
-                         "-- {$namaPerpus}";
-
-                $this->kirimPesanWA($phone, $pesan);
-            }
-
-            return redirect()->route('shared.transaksi.index')->with('success', 'Buku berhasil dikembalikan dan notifikasi dikirim!');
-
-        } catch (\Exception $e) {
-            return back()->with('error', 'Gagal: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * SIMPAN PEMINJAMAN BARU
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'user_id'     => 'required|exists:users,id',
-            'buku_id'     => 'required|array|min:1',
-            'no_induk_id' => 'required|array|min:1',
-            'tgl_kembali' => 'required|date|after_or_equal:today',
-        ]);
-
-        try {
-            $user = User::findOrFail($request->user_id);
-            $daftarBuku = [];
-
-            DB::transaction(function () use ($request, &$daftarBuku) {
-                foreach ($request->buku_id as $key => $idBuku) {
-                    $eksemplar = Eksemplar::findOrFail($request->no_induk_id[$key]);
-
-                    if (strtolower($eksemplar->status) !== 'tersedia') {
-                        throw new \Exception("Eksemplar '$eksemplar->no_induk' tidak tersedia.");
-                    }
-
-                    Peminjaman::create([
-                        'user_id'      => $request->user_id,
-                        'buku_id'      => $idBuku,
-                        'eksemplar_id' => $eksemplar->id,
-                        'no_induk'     => trim($eksemplar->no_induk),
-                        'tgl_pinjam'   => Carbon::now(),
-                        'tgl_kembali'  => $request->tgl_kembali,
-                        'status'       => 'dipinjam',
-                    ]);
-
-                    $eksemplar->update(['status' => 'dipinjam']);
-
-                    $buku = $eksemplar->buku;
-                    $stokBaru = Eksemplar::where('buku_id', $buku->id)->where('status', 'tersedia')->count();
-                    $buku->update(['stok' => $stokBaru]);
-
-                    $daftarBuku[] = $buku->judul;
-                }
-
-                // Notifikasi Web Pinjam Baru
-                Notification::create([
-                    'user_id'      => $request->user_id,
-                    'judul'        => 'Peminjaman Berhasil',
-                    'pesan'        => 'Buku ' . implode(', ', $daftarBuku) . ' telah berhasil dipinjam.',
-                    'tipe'         => 'success',
-                    'ikon'         => 'bi-check-circle',
-                    'sudah_dibaca' => false,
-                ]);
-            });
-
-            // Notifikasi WhatsApp Pinjam Baru
-            $phone = $user->no_hp ?? $user->no_telp;
-            if ($phone) {
-                $listBuku = "";
-                foreach($daftarBuku as $index => $judul) {
-                    $listBuku .= ($index+1) . ". " . $judul . "\n";
-                }
-
-                $pesan = "🔔 *NOTIFIKASI PINJAM*\n\n" .
-                         "Halo *{$user->name}*,\n" .
-                         "Peminjaman buku berhasil:\n\n" .
-                         $listBuku .
-                         "\n📅 *Batas Kembali:* " . Carbon::parse($request->tgl_kembali)->format('d-m-Y') . "\n" .
-                         "Mohon jaga buku dengan baik.";
-
-                $this->kirimPesanWA($phone, $pesan);
-            }
-
-            return redirect()->route('shared.transaksi.index')->with('success', 'Peminjaman berhasil dicatat!');
-        } catch (\Exception $e) {
-            return back()->with('error', $e->getMessage())->withInput();
-        }
-    }
-
-    /**
-     * PERPANJANG MASA PINJAM
-     */
-    public function extend($id)
-    {
-        $transaksi = Peminjaman::findOrFail($id);
-        $deadline = Carbon::parse($transaksi->tgl_kembali);
-
-        if ($transaksi->is_extended || Carbon::now()->gt($deadline)) {
-            return back()->with('error', 'Perpanjangan tidak diizinkan.');
-        }
-
-        $transaksi->update([
-            'tgl_kembali' => $deadline->addDays(7),
-            'is_extended' => true
-        ]);
-
-        Notification::create([
-            'user_id'      => $transaksi->user_id,
-            'judul'        => 'Masa Pinjam Diperpanjang',
-            'pesan'        => 'Batas waktu kembali buku "' . $transaksi->buku->judul . '" ditambah 7 hari.',
-            'tipe'         => 'warning',
-            'ikon'         => 'bi-calendar-plus',
-            'sudah_dibaca' => false,
-        ]);
-
-        return back()->with('success', 'Masa pinjam diperpanjang 7 hari.');
-    }
-
-    /**
-     * API: Pencarian User
-     */
-    public function getUsers(Request $request)
-    {
-        $keyword = $request->nim;
-        $user = User::where('nomor_identitas', $keyword)
-            ->orWhere('name', 'like', "%$keyword%")
-            ->first();
-
-        if ($user) {
-            return response()->json([
-                'success' => true,
-                'id' => $user->id,
-                'name' => $user->name,
-                'nomor_identitas' => $user->nomor_identitas,
-                'status' => '🟢 ' . strtoupper($user->status ?? 'AKTIF'),
-            ]);
-        }
-        return response()->json(['success' => false]);
-    }
-
-    /**
-     * API: Pencarian Buku & Stok
-     */
-    public function getBooks(Request $request)
-    {
-        $search = $request->search;
-        $books = Buku::where('judul', 'like', "%$search%")->get();
-
-        $data = $books->map(function($item) {
-            $stokTersedia = Eksemplar::where('buku_id', $item->id)
-                                     ->where('status', 'tersedia')
-                                     ->count();
-            return [
-                'id'    => $item->id,
-                'text'  => $item->judul,
-                'stok'  => $stokTersedia
-            ];
-        })->filter(function($item) {
-            return $item['stok'] > 0;
-        })->values();
-
-        return response()->json($data);
-    }
-
-    public function getEksemplar($buku_id)
-    {
-        return response()->json(Eksemplar::where('buku_id', $buku_id)->where('status', 'tersedia')->get(['id', 'no_induk']));
-    }
-
     public function create()
     {
         return view('shared.transaksi.create');
     }
 
     /**
-     * Fungsi Kirim WhatsApp
+     * Pencarian anggota via AJAX
      */
-    private function kirimPesanWA($target, $pesan)
+    public function getUsers(Request $request)
     {
-        $tokenSetting = Setting::where('key', 'wa_token')->first();
-        $token = ($tokenSetting && !empty($tokenSetting->value)) ? $tokenSetting->value : env('FONNTE_TOKEN');
+        $keyword = $request->nim;
 
-        $curl = curl_init();
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://api.fonnte.com/send',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => array(
-                'target' => $target,
-                'message' => $pesan,
-                'countryCode' => '62',
-            ),
-            CURLOPT_HTTPHEADER => array(
-                'Authorization: ' . $token
-            ),
-        ));
+        $user = User::whereIn('role', ['mahasiswa', 'dosen', 'pustakawan', 'admin'])
+            ->where(function($query) use ($keyword) {
+                $query->where('nomor_identitas', $keyword)
+                      ->orWhere('name', 'like', "%$keyword%");
+            })
+            ->first();
 
-        $response = curl_exec($curl);
-        curl_close($curl);
-        return $response;
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Data anggota tidak ditemukan.']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'id' => $user->id,
+            'name' => $user->name,
+            'nomor_identitas' => $user->nomor_identitas,
+            'role' => strtoupper($user->role),
+            'status' => $user->status_akun == 'aktif' ? 'AKTIF' : 'NON-AKTIF'
+        ]);
+    }
+
+    /**
+ * Pencarian buku via AJAX untuk Select2
+ */
+public function getBooks(Request $request)
+{
+    // Select2 mengirim keyword pencarian lewat parameter 'q'
+    $cari = $request->q;
+
+    $books = Buku::where('judul', 'LIKE', "%$cari%")
+        ->where('stok', '>', 0) // Hanya tampilkan yang stoknya ada
+        ->get()
+        ->map(function($item) {
+            return [
+                'id'    => $item->id,
+                'text'  => $item->judul,
+                'stok'  => $item->stok
+            ];
+        });
+
+    return response()->json($books);
+}
+
+/**
+ * Mengambil daftar nomor induk fisik (eksemplar) yang tersedia
+ */
+public function getEksemplar($buku_id)
+{
+    // Cari data eksemplar berdasarkan buku_id yang statusnya masih tersedia
+    $eksemplar = \App\Models\Eksemplar::where('buku_id', $buku_id)
+                ->where('status', 'tersedia') // Pastikan statusnya cocok dengan di database
+                ->get();
+
+    return response()->json($eksemplar);
+}
+    /**
+     * Proses simpan peminjaman baru
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'user_id'     => 'required|exists:users,id',
+            'no_induk_id' => 'required|array|min:1',
+           'tgl_tenggat' => 'required|date',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $user = User::findOrFail($request->user_id);
+            $daftarJudul = [];
+
+            foreach ($request->no_induk_id as $eksemplarId) {
+                $eksemplar = Eksemplar::with('buku')->findOrFail($eksemplarId);
+
+                if ($eksemplar->status !== 'tersedia') {
+                    throw new \Exception("Buku '{$eksemplar->buku->judul}' tidak tersedia.");
+                }
+
+                Peminjaman::create([
+                    'user_id'      => $user->id,
+                    'buku_id'      => $eksemplar->buku_id,
+                    'eksemplar_id' => $eksemplar->id,
+                    'tgl_pinjam'   => Carbon::now(),
+                    'tgl_tenggat'  => $request->tgl_tenggat,
+                    'status'       => 'dipinjam',
+                ]);
+
+                $eksemplar->update(['status' => 'dipinjam']);
+                $this->syncStok($eksemplar->buku_id);
+
+                $daftarJudul[] = $eksemplar->buku->judul;
+            }
+
+            $this->createWebNotif(
+                $user->id,
+                'Peminjaman Berhasil 📚',
+                "Batas pengembalian: " . Carbon::parse($request->tgl_tenggat)->format('d/m/Y'),
+                'info',
+                'bi-book'
+            );
+
+            DB::commit();
+
+            // Notifikasi WA
+            if ((Setting::where('key', 'notif_borrow')->first()->value ?? '0') == '1') {
+                $this->kirimNotifWA($user, 'borrow', $daftarJudul, $request->tgl_tenggat);
+            }
+
+            return redirect()->route('shared.transaksi.index')->with('success', 'Peminjaman berhasil dicatat.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Proses pengembalian buku
+     */
+    public function kembalikan(Request $request, $id)
+    {
+        $request->validate([
+            'kondisi_kembali' => 'required|in:baik,rusak,hilang', // Gunakan lowercase agar sinkron dengan match
+            'denda_fisik'     => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $peminjaman = Peminjaman::with(['user', 'buku'])->findOrFail($id);
+
+            // 1. Update data peminjaman
+            $peminjaman->update([
+                'status'                => 'dikembalikan',
+                'tgl_kembali'           => now(), // Gunakan tgl_kembali sesuai logika blade
+                'kondisi_kembali'       => $request->kondisi_kembali,
+                'denda_fisik'           => $request->denda_fisik ?? 0,
+                'catatan_kondisi'       => $request->catatan_kondisi,
+            ]);
+
+            // 2. Update status fisik eksemplar
+            $eksemplar = Eksemplar::find($peminjaman->eksemplar_id);
+            if ($eksemplar) {
+                $statusFisik = match ($request->kondisi_kembali) {
+                    'hilang' => 'hilang',
+                    'rusak'  => 'rusak',
+                    default  => 'tersedia',
+                };
+                $eksemplar->update(['status' => $statusFisik]);
+                $this->syncStok($eksemplar->buku_id);
+            }
+
+            DB::commit();
+
+            // Notifikasi WA Return
+            if ((Setting::where('key', 'notif_return')->first()->value ?? '0') == '1') {
+                $this->kirimNotifWA($peminjaman, 'return', $request->kondisi_kembali);
+            }
+
+            return redirect()->route('shared.transaksi.index')->with('success', 'Buku berhasil dikembalikan.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', "Gagal: " . $e->getMessage());
+        }
+    }
+
+    // --- Helper Methods ---
+
+    private function syncStok($bukuId) {
+        $count = Eksemplar::where('buku_id', $bukuId)->where('status', 'tersedia')->count();
+        Buku::where('id', $bukuId)->update(['stok' => $count]);
+    }
+
+    private function createWebNotif($userId, $judul, $pesan, $tipe, $ikon) {
+        Notification::create([
+            'user_id' => $userId,
+            'judul'   => $judul,
+            'pesan'   => $pesan,
+            'tipe'    => $tipe,
+            'ikon'    => $ikon,
+            'sudah_dibaca' => false,
+        ]);
+    }
+
+    private function kirimNotifWA($model, $type, $extra = null, $extra2 = null) {
+        $token = Setting::where('key', 'wa_token')->first()->value ?? env('FONNTE_TOKEN');
+        if (!$token) return;
+
+        if ($type === 'return') {
+            $phone = $model->user->no_telp;
+            $pesan = "✅ *PENGEMBALIAN BERHASIL*\n\nBuku: *{$model->buku->judul}*\nKondisi: " . strtoupper($extra);
+        } else {
+            $phone = $model->no_telp;
+            $list = is_array($extra) ? implode("\n- ", $extra) : $extra;
+            $pesan = "📚 *PEMINJAMAN BERHASIL*\n\nBuku:\n- {$list}\n\nBatas kembali: *" . Carbon::parse($extra2)->format('d-m-Y') . "*";
+        }
+
+        if ($phone) {
+            $phone = preg_replace('/[^0-9]/', '', $phone);
+            if (str_starts_with($phone, '0')) $phone = '62' . substr($phone, 1);
+
+            $curl = curl_init();
+            curl_setopt_array($curl, [
+                CURLOPT_URL => 'https://api.fonnte.com/send',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POSTFIELDS => ['target' => $phone, 'message' => $pesan],
+                CURLOPT_HTTPHEADER => ['Authorization: ' . $token],
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
+            curl_exec($curl);
+            curl_close($curl);
+        }
     }
 }

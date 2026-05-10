@@ -59,4 +59,9 @@ public function claims()
         // Pastikan foreign key 'buku_id' sesuai dengan yang ada di tabel eksemplars
         return $this->hasMany(Eksemplar::class, 'buku_id');
     }
+
+    public function peminjaman()
+{
+    return $this->hasMany(Peminjaman::class, 'buku_id');
+}
 }

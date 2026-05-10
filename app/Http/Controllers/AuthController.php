@@ -90,7 +90,7 @@ class AuthController extends Controller
             return redirect()->route('pustakawan.dashboard');
         } 
         
-        if ($role === 'dosen') {
+        if ($role === 'dosen' || $role === 'kaprodi') {
             // Pastikan di web.php sudah ada ->name('dosen.beranda')
             return redirect()->route('dosen.beranda');
         }
