@@ -13,15 +13,8 @@
 </head>
 <body class="antialiased">
 
-    <nav class="bg-[#2D3E50] text-white p-4 sticky top-0 z-50 shadow-md">
-        <div class="container mx-auto flex justify-between items-center px-6">
-            <div class="flex items-center space-x-3">
-                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo" class="h-8">
-                <span class="text-[10px] font-bold uppercase tracking-wider">Digital <span class="text-yellow-400">Library ITH</span></span>
-            </div>
-            <a href="{{ route('mahasiswa.beranda') }}" class="text-[10px] font-bold uppercase hover:text-yellow-400 transition">Kembali</a>
-        </div>
-    </nav>
+    {{-- MEMANGGIL HEADER SERAGAM TERPUSAT --}}
+    @include('layouts.header')
 
     <main class="py-12 px-6">
         <div class="max-w-3xl mx-auto">
@@ -39,10 +32,10 @@
 
             <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 overflow-hidden border border-slate-100">
                 <div class="p-1 bg-gradient-to-r from-indigo-400 to-blue-500"></div>
-                
+
                 <form action="{{ route('mahasiswa.usulan.store') }}" method="POST" class="p-10 space-y-8">
                     @csrf
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {{-- Judul Buku --}}
                         <div class="md:col-span-2">

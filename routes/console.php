@@ -1,13 +1,10 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
-
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
-
 use Illuminate\Support\Facades\Schedule;
+use App\Models\Setting; // Pastikan model Setting sudah ada
 
-// Menjalankan perintah pengingat setiap hari jam 08:00 pagi
-Schedule::command('app:send-return-reminder')->dailyAt('08:00');
+// Mengambil jam dari database. Jika tidak ada, default ke 08:00
+$notifTime = Setting::where('key', 'notif_time')->first()->value ?? '08:00';
+
+// Jalankan perintah berdasarkan jam dari database
+Schedule::command('app:send-return-reminder')->dailyAt($notifTime);

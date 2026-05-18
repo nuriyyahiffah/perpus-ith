@@ -11,26 +11,8 @@
 </head>
 <body class="antialiased">
 
-    {{-- NAVBAR SEDERHANA --}}
-    <nav class="bg-[#1E293B]/90 backdrop-blur-md text-white py-4 sticky top-0 z-50 border-b border-white/10">
-        <div class="container mx-auto flex justify-between items-center px-6">
-            <div class="flex items-center space-x-4">
-                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo ITH" class="h-10 brightness-110">
-                <div class="hidden sm:block border-l border-white/20 pl-4">
-                    <span class="text-[11px] font-black leading-none uppercase tracking-tighter block">
-                        Manajemen<br><span class="text-yellow-400">Usulan Buku ITH</span>
-                    </span>
-                </div>
-            </div>
-        <a href="{{ 
-    Auth::user()->role === 'admin' ? route('admin.dashboard') : 
-    (Auth::user()->role === 'pustakawan' ? route('pustakawan.dashboard') : 
-    (in_array(Auth::user()->role, ['dosen', 'kaprodi']) ? route('dosen.beranda') : 
-    route('mahasiswa.beranda'))) 
-}}" class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-300 hover:text-white transition">
-    Dashboard
-</a>  </div>
-    </nav>
+    {{-- MEMANGGIL HEADER SERAGAM YANG SUDAH DIBUAT --}}
+    @include('layouts.header')
 
     <div class="container mx-auto py-10 px-6">
         <div class="mb-10">

@@ -13,19 +13,53 @@
 </head>
 <body class="antialiased min-h-screen flex flex-col">
 
-    <nav class="bg-[#2D3E50] text-white p-4 sticky top-0 z-50 shadow-md">
-        <div class="container mx-auto flex justify-between items-center px-6">
-            <div class="flex items-center space-x-3">
-                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo" class="h-8">
-                <span class="text-[10px] font-bold uppercase tracking-wider">Digital <span class="text-yellow-400">Library ITH</span></span>
+    {{-- Navbar Seragam Sesuai Referensi Gambar --}}
+    <nav class="bg-[#2D3E50] text-white py-4 px-6 sticky top-0 z-50 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+
+            {{-- Sisi Kiri: Tombol Kembali (Berdasarkan Role), Logo, dan Nama Instansi --}}
+            <div class="flex items-center space-x-5">
+
+                {{-- Tombol Kembali yang Aman dari Page Expired --}}
+                @if(Auth::user()->role == 'mahasiswa')
+                    <a href="{{ route('mahasiswa.beranda') }}" class="text-white hover:text-slate-300 transition text-xl flex items-center" title="Kembali ke Beranda Mahasiswa">
+                        <i class="bi bi-arrow-left text-2xl font-bold"></i>
+                    </a>
+                @else
+                    <a href="{{ route('dosen.beranda') }}" class="text-white hover:text-slate-300 transition text-xl flex items-center" title="Kembali ke Beranda Dosen">
+                        <i class="bi bi-arrow-left text-2xl font-bold"></i>
+                    </a>
+                @endif
+
+                {{-- Garis Pembatas Vertikal Pertama --}}
+                <div class="h-8 w-[1px] bg-slate-500/40"></div>
+
+                {{-- Logo dan Teks Instansi Perpustakaan --}}
+                <div class="flex items-center space-x-3">
+                    <img src="{{ asset('images/logo_ith.png') }}" alt="Logo" class="h-9">
+
+                    {{-- Garis Pembatas Vertikal Kedua --}}
+                    <div class="h-8 w-[1px] bg-slate-500/40 mx-1"></div>
+
+                    <div class="flex flex-col">
+                        <span class="text-xs font-black uppercase tracking-wider leading-none">PERPUSTAKAAN</span>
+                        <span class="text-[8px] text-yellow-400 font-bold uppercase tracking-wider mt-1">Institut Teknologi Bacharuddin Jusuf Habibie</span>
+                    </div>
+                </div>
             </div>
-            <div class="text-[10px] font-bold uppercase tracking-wider">Notifikasi</div>
+
+            {{-- Sisi Kanan: Informasi Pengguna Aktif --}}
+            <div class="flex flex-col text-right">
+                <span class="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Pengguna Aktif</span>
+                <span class="text-xs font-bold text-white tracking-wide leading-none">{{ Auth::user()->name }}</span>
+            </div>
+
         </div>
     </nav>
 
     <main class="py-12 px-6 flex-grow">
         <div class="max-w-4xl mx-auto">
-            {{-- Header --}}
+            {{-- Header Konten --}}
             <div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 class="text-2xl font-black text-[#2D3E50] uppercase tracking-tight">Notifikasi Anda</h1>
@@ -41,7 +75,6 @@
                 @if($notifications->count() > 0)
                     <div class="flex gap-2">
                         @if($unreadCount > 0)
-                            {{-- Perbaikan: Method POST sesuai web.php --}}
                             <form action="{{ route('notifikasi.read-all') }}" method="POST">
                                 @csrf
                                 <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase rounded-lg transition shadow-sm">
@@ -49,7 +82,7 @@
                                 </button>
                             </form>
                         @endif
-                        {{-- Perbaikan: Method DELETE sesuai web.php --}}
+
                         <form action="{{ route('notifikasi.destroy-all') }}" method="POST" onsubmit="return confirm('Hapus semua notifikasi?')">
                             @csrf
                             @method('DELETE')
@@ -100,33 +133,30 @@
                                     </div>
                                 </div>
 
-                               {{-- Actions --}}
-<div class="flex gap-2 flex-shrink-0 self-end sm:self-start">
-    @if(!$notification->sudah_dibaca)
-        {{-- Tombol Tanda Centang (Mark as Read) --}}
-        <form action="{{ route('notifikasi.read', $notification->id) }}" method="POST">
-            @csrf
-            <button type="submit"
-                    class="w-9 h-9 flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition border border-emerald-100 group-hover:scale-110 shadow-sm"
-                    title="Tandai sudah dibaca">
-                <i class="bi bi-check-lg text-lg"></i>
-            </button>
-        </form>
-    @endif
+                                {{-- Actions --}}
+                                <div class="flex gap-2 flex-shrink-0 self-end sm:self-start">
+                                    @if(!$notification->sudah_dibaca)
+                                        <form action="{{ route('notifikasi.read', $notification->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="w-9 h-9 flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition border border-emerald-100 group-hover:scale-110 shadow-sm"
+                                                    title="Tandai sudah dibaca">
+                                                <i class="bi bi-check-lg text-lg"></i>
+                                            </button>
+                                        </form>
+                                    @endif
 
-    {{-- Tombol Hapus --}}
-    <form action="{{ route('notifikasi.destroy', $notification->id) }}" method="POST">
-        @csrf
-        @method('DELETE')
-        <button type="submit"
-                class="w-9 h-9 flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition border border-rose-100 group-hover:scale-110 shadow-sm"
-                onclick="return confirm('Hapus notifikasi ini?')"
-                title="Hapus">
-            <i class="bi bi-trash text-sm"></i>
-        </button>
-    </form>
-</div>
-
+                                    <form action="{{ route('notifikasi.destroy', $notification->id) }}" method="POST">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="w-9 h-9 flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition border border-rose-100 group-hover:scale-110 shadow-sm"
+                                                onclick="return confirm('Hapus notifikasi ini?')"
+                                                title="Hapus">
+                                            <i class="bi bi-trash text-sm"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     @endforeach

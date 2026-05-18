@@ -4,14 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tambah Peminjaman - SIPUSTAKA</title>
-    
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
     <style>
-        body { background-color: #f0f2f5; padding-top: 30px; font-family: 'Segoe UI', sans-serif; }
+        /* Agar utility class Bootstrap tidak bentrok dengan base Tailwind, kita deklarasikan ulang font dan bg body */
+        body { background-color: #f0f2f5 !important; font-family: 'Segoe UI', sans-serif !important; }
         .card { border-radius: 15px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
         .card-header { border-radius: 15px 15px 0 0 !important; background: linear-gradient(45deg, #0d6efd, #0043a8); }
         .info-box { display: none; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 10px; padding: 15px; }
@@ -24,7 +27,11 @@
 </head>
 <body>
 
-<div class="container mb-5">
+{{-- 1. PANGGIL HEADER KOMPONEN YANG SUDAH ANDA BUAT --}}
+@include('layouts.header')
+
+{{-- Beri margin-top (mt-5) setelah header agar ada jarak dengan form --}}
+<div class="container mb-5 mt-4">
     <div class="row justify-content-center">
         <div class="col-lg-10">
             @if(session('error'))
@@ -39,9 +46,9 @@
                     <h5 class="mb-0"><i class="fas fa-edit me-2"></i> Form Transaksi Peminjaman</h5>
                 </div>
                 <div class="card-body p-4">
-                    <form action="{{ route('shared.transaksi.store') }}" method="POST" id="formPeminjaman">
+                    <form action="{{ route('shared.peminjaman.store') }}" method="POST" id="formPeminjaman">
                         @csrf
-                        
+
                         <div class="mb-4">
                             <label class="form-label fw-bold text-dark">Peminjam (Mahasiswa / Dosen / Kaprodi)</label>
                             <div class="input-group">
@@ -51,7 +58,7 @@
                                 </button>
                             </div>
                             <input type="hidden" name="user_id" id="user_id_hidden">
-                            
+
                             <div id="user_info_box" class="info-box mt-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div class="d-flex align-items-center gap-3">
@@ -110,13 +117,12 @@
                                 <label class="form-label fw-bold text-dark">Tenggat Pengembalian</label>
                                 <input type="date" name="tgl_tenggat" class="form-control" value="{{ date('Y-m-d', strtotime('+7 days')) }}" required style="height: 45px;">
                                 <small class="text-muted italic">Masa pinjam default adalah 7 hari.</small>
+                                <small class="text-danger fw-bold d-block"><i class="fas fa-clock me-1"></i> Batas waktu pengembalian: Pukul 12:00 WITA.</small>
                             </div>
                         </div>
 
-                        <div class="mt-4 d-flex justify-content-between align-items-center">
-                            <a href="{{ route('shared.transaksi.index') }}" class="btn btn-outline-secondary px-4">
-                                <i class="fas fa-arrow-left me-1"></i> Kembali
-                            </a>
+                        {{-- Tombol aksi dipusatkan pada Simpan Transaksi karena navigasi kembali sudah dicover tombol panah di header --}}
+                        <div class="mt-4 d-flex justify-content-end">
                             <button type="submit" id="btnSimpan" class="btn btn-primary btn-lg px-5 fw-bold" disabled>
                                 <i class="fas fa-save me-2"></i> Simpan Transaksi
                             </button>
@@ -136,31 +142,48 @@
 $(document).ready(function() {
     const MAX_PINJAM = 3;
 
-    // 1. CEK USER
+    // 1. FUNGSI CEK USER
     $('#btnCekUser').click(function() {
         let kw = $('#keyword_user').val();
-        if(kw.length < 2){
+
+        if(kw.length < 2) {
             alert('Ketik minimal 2 karakter untuk pencarian');
             return;
         }
 
         $.ajax({
-            url: "{{ route('shared.getUsers') }}", 
+            url: "{{ route('shared.getUsers') }}",
             method: "GET",
             data: { nim: kw },
             success: function(res) {
                 if(res.success) {
+                    if(res.is_suspended_until) {
+                        let tglSuspend = new Date(res.is_suspended_until);
+                        let sekarang = new Date();
+
+                        if(tglSuspend > sekarang) {
+                            alert('⚠️ PERINGATAN: Akun ini sedang DITANGGUHKAN hingga ' +
+                                  res.is_suspended_until_formatted +
+                                  ' karena keterlambatan sebelumnya.');
+
+                            $('#user_id_hidden').val('');
+                            $('#user_info_box').hide();
+                            validateForm();
+                            return;
+                        }
+                    }
+
                     $('#user_id_hidden').val(res.id);
                     $('#res_name').text(res.name);
                     $('#res_nim').text('ID: ' + res.nomor_identitas);
                     $('#res_role').text(res.role).show();
-                    $('#res_status').text(res.status);
+                    $('#res_status').text('AKTIF').removeClass('bg-danger').addClass('bg-success');
                     $('#user_info_box').fadeIn();
 
                     if(res.role.toLowerCase() === 'mahasiswa') {
-                        $('#res_role').removeClass('bg-secondary').addClass('bg-info text-dark');
+                        $('#res_role').removeClass('bg-secondary bg-warning').addClass('bg-info text-dark');
                     } else {
-                        $('#res_role').removeClass('bg-secondary').addClass('bg-warning text-dark');
+                        $('#res_role').removeClass('bg-secondary bg-info').addClass('bg-warning text-dark');
                     }
                 } else {
                     alert('Data peminjam tidak ditemukan!');
@@ -168,6 +191,10 @@ $(document).ready(function() {
                     $('#user_info_box').hide();
                 }
                 validateForm();
+            },
+            error: function(xhr) {
+                console.error(xhr);
+                alert('Terjadi kesalahan sistem saat mengambil data user!');
             }
         });
     });
@@ -178,7 +205,7 @@ $(document).ready(function() {
         placeholder: 'Ketik judul buku...',
         minimumInputLength: 1,
         ajax: {
-            url: "{{ route('shared.getBooks') }}",
+            url: "{{ route('shared.api.books.search') }}",
             dataType: 'json',
             delay: 250,
             data: function (params) {
@@ -212,31 +239,25 @@ $(document).ready(function() {
 
         let row = `
             <tr id="row_${data.id}">
-                <td>
-                    <div class="fw-bold text-dark">${data.text}</div>
-                </td>
+                <td><div class="fw-bold text-dark">${data.text}</div></td>
                 <td class="text-center">
                     <span class="badge bg-light text-primary border border-primary">${data.stok} Eks</span>
                 </td>
                 <td>
                     <select name="no_induk_id[]" class="form-select form-select-sm" id="${uniqueSelectId}" required>
                         <option value="">Memuat No. Induk...</option>
-                    </select>                
+                    </select>
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-remove btn-sm" onclick="removeRow('${data.id}')">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </td>
-            </tr>
-        `;
+            </tr>`;
 
         $('#list_buku_pinjam').append(row);
 
-        // Ambil Eksemplar - Menggunakan placeholder :id agar route Laravel tidak error
-        let urlEksemplar = "{{ route('shared.getEksemplar', ':id') }}";
-        urlEksemplar = urlEksemplar.replace(':id', data.id);
-
+        let urlEksemplar = "{{ route('shared.getEksemplar', ':id') }}".replace(':id', data.id);
         $.get(urlEksemplar, function(res) {
             let options = '<option value="">-- Pilih No. Induk --</option>';
             if(res.length > 0) {
@@ -253,12 +274,14 @@ $(document).ready(function() {
         validateForm();
     });
 
+    // 4. VALIDASI TOMBOL SIMPAN
     window.validateForm = function() {
         let userSet = $('#user_id_hidden').val() !== "";
         let hasBooks = $('#list_buku_pinjam tr').not('#empty_row').length > 0;
         $('#btnSimpan').prop('disabled', !(userSet && hasBooks));
     };
 
+    // 5. HAPUS BARIS BUKU
     window.removeRow = function(id) {
         $(`#row_${id}`).remove();
         if ($('#list_buku_pinjam tr').not('#empty_row').length === 0) {
@@ -268,6 +291,5 @@ $(document).ready(function() {
     };
 });
 </script>
-
 </body>
 </html>

@@ -13,34 +13,77 @@
 </head>
 <body class="antialiased text-slate-800">
 
-    {{-- NAVBAR --}}
-    <nav class="bg-[#2D3E50] text-white p-4 sticky top-0 z-50 shadow-lg">
-        <div class="container mx-auto flex justify-between items-center px-6">
-            <div class="flex items-center space-x-3">
-                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo" class="h-8">
-                <span class="text-[10px] font-bold uppercase tracking-wider">SIPUSTAKA <span class="text-yellow-400">Digital Library</span></span>
+    {{-- NAVBAR SERAGAM SESUAI REFERENSI DESAIN --}}
+    <nav class="bg-[#2D3E50] text-white py-4 px-6 sticky top-0 z-50 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+
+            {{-- Sisi Kiri: Tombol Kembali Pintar, Logo, dan Nama Instansi --}}
+            <div class="flex items-center space-x-5">
+
+                @php
+                    $backUrl = url()->previous();
+                    if($backUrl == url()->current()) {
+                        $backUrl = match(Auth::user()->role) {
+                            'admin' => route('sidebar-admin'),
+                            'mahasiswa' => route('mahasiswa.beranda'),
+                            'dosen', 'kaprodi' => route('dosen.beranda'),
+                            'pustakawan' => route('sidebar-pustakawan'),
+                            default => url('/'),
+                        };
+                    }
+                @endphp
+
+                {{-- Tombol Kembali Fleksibel & Aman --}}
+                <a href="{{ $backUrl }}" class="text-white hover:text-slate-300 transition text-xl flex items-center" title="Kembali">
+                    <i class="bi bi-arrow-left text-2xl font-bold"></i>
+                </a>
+
+                {{-- Garis Pembatas Vertikal Pertama --}}
+                <div class="h-8 w-[1px] bg-slate-500/40"></div>
+
+                {{-- Logo dan Teks Instansi Perpustakaan --}}
+                <div class="flex items-center space-x-3">
+                    <img src="{{ asset('images/logo_ith.png') }}" alt="Logo" class="h-9">
+
+                    {{-- Garis Pembatas Vertikal Kedua --}}
+                    <div class="h-8 w-[1px] bg-slate-500/40 mx-1"></div>
+
+                    <div class="flex flex-col">
+                        <span class="text-xs font-black uppercase tracking-wider leading-none">PERPUSTAKAAN</span>
+                        <span class="text-[8px] text-yellow-400 font-bold uppercase tracking-wider mt-1">Institut Teknologi Bacharuddin Jusuf Habibie</span>
+                    </div>
+                </div>
             </div>
 
-            @php
-                $backUrl = url()->previous();
-                // Jika URL sebelumnya sama dengan sekarang, arahkan ke beranda sesuai role
-                if($backUrl == url()->current()) {
-                    $backUrl = match(Auth::user()->role) {
-                        'admin' => route('admin.dashboard'),
-                        'mahasiswa' => route('mahasiswa.beranda'),
-                        'dosen', 'kaprodi' => route('dosen.beranda'),
-                        default => url('/'),
-                    };
-                }
-            @endphp
-            <a href="{{ $backUrl }}" class="text-[10px] font-bold uppercase hover:text-yellow-400 transition flex items-center gap-2">
-                <i class="bi bi-arrow-left"></i> Kembali
-            </a>
+            {{-- Sisi Kanan: Informasi Pengguna Aktif --}}
+            <div class="flex flex-col text-right">
+                <span class="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Pengguna Aktif</span>
+                <span class="text-xs font-bold text-white tracking-wide leading-none">{{ Auth::user()->name }}</span>
+            </div>
+
         </div>
     </nav>
 
     <main class="py-12 px-6">
         <div class="max-w-6xl mx-auto">
+
+            {{-- AREA NOTIFIKASI --}}
+            <div class="mb-8 max-w-4xl mx-auto">
+                @if(session('success'))
+                    <div class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl flex items-center gap-3 shadow-sm">
+                        <i class="bi bi-check-circle-fill text-emerald-500 text-xl"></i>
+                        <span class="text-sm font-bold">{{ session('success') }}</span>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl flex items-center gap-3 shadow-sm">
+                        <i class="bi bi-exclamation-triangle-fill text-rose-500 text-xl"></i>
+                        <span class="text-sm font-bold">{{ session('error') }}</span>
+                    </div>
+                @endif
+            </div>
+
             <div class="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/60 overflow-hidden border border-slate-50 flex flex-col md:flex-row">
 
                 {{-- BAGIAN KIRI: COVER --}}
@@ -63,7 +106,7 @@
 
                 {{-- BAGIAN KANAN: DETAIL --}}
                 <div class="md:w-[60%] p-10 md:p-16">
-                    <div class="mb-10">
+                    <div class="mb-8">
                         <span class="px-5 py-2 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
                             {{ $buku->kategori->nama_kategori ?? 'Koleksi Umum' }}
                         </span>
@@ -76,7 +119,7 @@
                     </div>
 
                     {{-- INFO GRID --}}
-                    <div class="grid grid-cols-2 gap-6 py-8 border-y border-slate-100 mb-10">
+                    <div class="grid grid-cols-2 gap-6 py-6 border-y border-slate-100 mb-8">
                         <div>
                             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Penerbit</h4>
                             <p class="text-sm font-bold text-[#2D3E50]">{{ $buku->penerbit ?? 'ITH Collection' }}</p>
@@ -85,67 +128,100 @@
                             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ketersediaan</h4>
                             <p class="text-sm font-bold {{ ($buku->stok ?? 0) > 0 ? 'text-emerald-500' : 'text-rose-500' }}">
                                 @if(($buku->stok ?? 0) > 0)
-                                    <i class="bi bi-check-circle-fill"></i> {{ $buku->stok }} Eksemplar
+                                    <i class="bi bi-check-circle-fill mr-1"></i> {{ $buku->stok }} Eksemplar
                                 @else
-                                    <i class="bi bi-x-circle-fill"></i> Sedang Dipinjam Semua
+                                    <i class="bi bi-x-circle-fill mr-1"></i> Stok Kosong
                                 @endif
                             </p>
                         </div>
+                    </div>
+
+                    {{-- SINOPSIS --}}
+                    <div class="mb-10">
+                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Sinopsis Buku</h4>
+                        <p class="text-slate-600 leading-relaxed text-sm italic">
+                            "{{ $buku->sinopsis ?? 'Belum ada sinopsis untuk buku ini.' }}"
+                        </p>
                     </div>
 
                     {{-- AREA TOMBOL AKSI --}}
                     <div class="flex flex-col gap-4">
                         @php $userRole = Auth::user()->role; @endphp
 
+                        {{-- USER BIASA (Mahasiswa/Dosen/Kaprodi) --}}
                         @if(in_array($userRole, ['mahasiswa', 'dosen', 'kaprodi']))
-                            
-                            {{-- LOGIKA STOK --}}
+
                             @if(($buku->stok ?? 0) > 0)
+                                {{-- JIKA STOK ADA --}}
                                 <div class="p-6 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-4">
                                     <div class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-emerald-100">
                                         <i class="bi bi-info-circle"></i>
                                     </div>
                                     <div>
                                         <p class="text-[10px] font-black text-emerald-800 uppercase tracking-wider">Buku Tersedia</p>
-                                        <p class="text-[11px] text-emerald-700 font-medium">Silakan hubungi petugas perpustakaan di lantai 2 untuk peminjaman fisik.</p>
+                                        <p class="text-[11px] text-emerald-700 font-medium">Silakan kunjungi perpustakaan ITH untuk peminjaman langsung.</p>
                                     </div>
                                 </div>
                             @else
-                                {{-- FORM RESERVASI UNTUK SEMUA USER NON-ADMIN --}}
-                                <div class="p-6 bg-amber-50 border border-amber-100 rounded-2xl">
-                                    <div class="flex items-center gap-4 mb-4">
-                                        <div class="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-100">
-                                            <i class="bi bi-clock-history"></i>
+                                {{-- JIKA STOK KOSONG --}}
+                                @php
+                                    $reservasiAktif = \App\Models\Reservation::where('user_id', Auth::id())
+                                                        ->where('buku_id', $buku->id)
+                                                        ->where('status', 'menunggu')
+                                                        ->exists();
+                                @endphp
+
+                                @if($reservasiAktif)
+                                    {{-- TAMPILAN JIKA SUDAH RESERVASI --}}
+                                    <div class="p-6 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-4">
+                                        <div class="w-10 h-10 bg-rose-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg">
+                                            <i class="bi bi-hourglass-split"></i>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] font-black text-amber-800 uppercase tracking-wider">Sistem Reservasi</p>
-                                            <p class="text-[11px] text-amber-700 font-medium">Stok fisik kosong. Anda dapat masuk antrean reservasi untuk diprioritaskan.</p>
+                                            <p class="text-[10px] font-black text-rose-800 uppercase tracking-wider">Reservasi Aktif</p>
+                                            <p class="text-[11px] text-rose-700 font-medium">Anda sudah masuk dalam daftar antrean menunggu buku ini.</p>
                                         </div>
-                                    </div>       
-                                        {{-- Gunakan satu nama route yang sama untuk semua role --}}
-            <form action="{{ route('reservasi.store', $buku->id) }}" method="POST">
-                @csrf
-                <button type="submit" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition shadow-lg shadow-amber-200 flex items-center justify-center gap-2">
-                    <i class="bi bi-calendar-plus-fill"></i> Ambil Antrean Reservasi
-                </button>
-            </form>
-        </div>
+                                    </div>
+                                @else
+                                    {{-- TAMPILAN TOMBOL UNTUK MENGAMBIL ANTREAN --}}
+                                    <div class="p-6 bg-amber-50 border border-amber-100 rounded-2xl shadow-sm">
+                                        <div class="flex items-center gap-4 mb-5">
+                                            <div class="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg">
+                                                <i class="bi bi-clock-history"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-black text-amber-800 uppercase tracking-wider">Antrean Reservasi</p>
+                                                <p class="text-[11px] text-amber-700 font-medium">Dapatkan notifikasi WA otomatis saat buku ini tersedia.</p>
+                                            </div>
+                                        </div>
+
+                                        <form action="{{ route('reservasi.store', $buku->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-amber-200 flex items-center justify-center gap-2">
+                                                <i class="bi bi-calendar-plus-fill"></i> Ambil Antrean Reservasi
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
                             @endif
-                        @elseif($userRole == 'admin')
-                            {{-- TAMPILAN ADMIN --}}
-                            <div class="p-6 bg-slate-100 rounded-2xl border border-slate-200 text-center">
-                                <p class="text-[10px] font-black text-slate-500 uppercase italic">Anda masuk sebagai Administrator</p>
-                                <div class="flex gap-4 mt-4">
-                                    <a href="{{ route('admin.buku.edit', $buku->id) }}" class="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition">
-                                        Edit Data Buku
-                                    </a>
-                                </div>
+
+                        {{-- ADMIN / PUSTAKAWAN --}}
+                        @elseif($userRole == 'admin' || $userRole == 'pustakawan')
+                            <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200">
+                                <p class="text-[10px] font-black text-slate-400 uppercase text-center mb-4 tracking-widest">Manajemen Data</p>
+                                <a href="{{ route($userRole . '.buku.edit', $buku->id) }}" class="flex items-center justify-center gap-2 w-full py-4 bg-[#2D3E50] hover:bg-indigo-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all">
+                                    <i class="bi bi-pencil-square"></i> Edit Informasi Buku
+                                </a>
                             </div>
                         @endif
                     </div>
-                </div> {{-- End Bagian Kanan --}}
 
+                </div>
             </div>
+
+            <p class="mt-8 text-center text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em]">
+                SIPUSTAKA ITH &copy; 2026
+            </p>
         </div>
     </main>
 

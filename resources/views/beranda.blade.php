@@ -5,43 +5,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digital Library ITH</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; scroll-behavior: smooth; }
-        /* Gradient lebih halus */
+        /* Gradasi warna latar belakang disamakan persis dengan beranda mahasiswa */
         .hero-gradient { background: linear-gradient(180deg, #E2E8F0 0%, #F8FAFC 100%); }
-        /* Animasi melayang untuk gambar */
+        /* Animasi melayang gambar buku */
         .float { animation: float 6s ease-in-out infinite; }
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-20px); }
             100% { transform: translateY(0px); }
         }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 
-<body class="antialiased">
+<body class="antialiased" x-data="{ search: '', selectedBook: null }">
 
-    <nav class="bg-[#1E293B]/90 backdrop-blur-md text-white py-4 sticky top-0 z-50 border-b border-white/10">
+    <div class="bg-[#1E293B] text-slate-300 text-[10px] font-bold uppercase tracking-wider py-2.5 border-b border-white/10">
+    <div class="container mx-auto flex justify-between items-center px-6">
+        <span class="flex items-center gap-2">
+            <i class="bi bi-clock text-yellow-400"></i> SENIN - JUMAT: 07:30 - 17:00 WITA
+        </span>
+        <span class="flex items-center gap-2">
+            <i class="bi bi-geo-alt text-yellow-400"></i> KAMPUS 2 ITH | CAPPA GALUNG, KEC. BACUKIKI, KOTA PAREPARE, SULAWESI SELATAN 91125
+        </span>
+    </div>
+</div>
+
+    <nav class="bg-[#1E293B]/90 backdrop-blur-md text-white py-4 sticky top-0 z-50 border-b border-white/5">
         <div class="container mx-auto flex justify-between items-center px-6">
-            <div class="flex items-center space-x-4">
-                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo ITH" class="h-10 brightness-110">
-                <div class="hidden sm:block border-l border-white/20 pl-4">
-                    <span class="text-[11px] font-black leading-none uppercase tracking-tighter block">
-                        Digital<br><span class="text-yellow-400">Library ITH</span>
+            
+            <div class="flex items-center space-x-3">
+                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo ITH" class="h-10">
+                <div class="leading-tight border-l border-white/20 pl-3">
+                    <span class="text-xs font-[800] tracking-wider block uppercase">PERPUSTAKAAN</span>
+                    <span class="text-[9px] font-bold text-yellow-400 tracking-tight block uppercase leading-none mt-0.5">
+                        INSTITUT TEKNOLOGI BACHARUDDIN JUSUF HABIBIE
                     </span>
                 </div>
             </div>
 
             <div class="hidden md:flex items-center space-x-8 text-[10px] font-black uppercase tracking-[0.15em]">
                 <a href="{{ route('beranda') }}" class="{{ Route::is('beranda') ? 'text-yellow-400' : 'text-slate-300 hover:text-white' }} transition">Beranda</a>
-                <a href="{{ route('katalog.index') }}" class="text-slate-300 hover:text-white transition">Katalog</a>
-                
+                <a href="{{ route('katalog.publik') }}" class="text-slate-300 hover:text-white transition">Katalog</a>
                 @guest
-                    <a href="#tentang" class="text-slate-300 hover:text-white transition">Tentang</a>
+                    <a href="#katalog" class="text-slate-300 hover:text-white transition">Koleksi</a>
                 @else
                     @if(Auth::user()->role == 'dosen')
                         <a href="{{ route('dosen.usulan.buku') }}" class="flex items-center gap-2 text-slate-300 hover:text-white transition">
@@ -92,58 +108,143 @@
         <div class="container mx-auto px-8 flex flex-col md:flex-row items-center justify-between">
             <div class="md:w-1/2 mb-16 md:mb-0">
                 <span class="inline-block px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 italic">Parepare, Indonesia</span>
-                <h1 class="text-7xl font-[900] text-[#1E293B] leading-[0.85] uppercase tracking-tighter mb-8">
-                    Perpustakaan <br> <span class="text-blue-600 italic">Digital ITH</span>
+
+                <h1 class="text-5xl md:text-6xl font-[800] text-slate-800 leading-[1.1] uppercase tracking-tighter mb-6">
+                    PERPUSTAKAAN <br>
+                    <span class="text-blue-600 font-[900] italic">DIGITAL ITH</span>
                 </h1>
+
                 <p class="text-slate-500 text-sm font-medium max-w-sm leading-relaxed mb-10">
                     Sistem informasi perpustakaan berbasis web untuk mendukung riset dan teknologi di lingkungan <span class="text-slate-800 font-bold italic text-xs">Institut Teknologi BJ Habibie.</span>
                 </p>
-                <div class="flex gap-4">
-                    <a href="{{ route('katalog.index') }}" class="bg-[#1E293B] text-white px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:shadow-2xl transition-all active:scale-95">Jelajahi Koleksi</a>
+
+                <div class="max-w-md bg-white p-2 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-200/60">
+                    <div class="flex items-center pl-3 text-slate-400">
+                        <i class="bi bi-search text-sm"></i>
+                    </div>
+                    <input type="text" x-model="search"
+                        class="w-full bg-transparent border-none py-2 px-1 text-slate-700 text-xs font-bold placeholder:text-slate-400 focus:outline-none"
+                        placeholder="Cari judul buku, penulis, atau kategori...">
                 </div>
             </div>
+
             <div class="md:w-1/2 flex justify-center md:justify-end relative">
                 <div class="absolute w-72 h-72 bg-blue-400/20 rounded-full blur-3xl -z-10 animate-pulse"></div>
-                <img src="{{ asset('images/books.png') }}" alt="Hero" class="w-full max-w-md drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)] float">
+                <img src="{{ asset('images/books.png') }}" alt="Koleksi Buku" class="w-full max-w-md drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)] float">
             </div>
         </div>
     </header>
 
-    <main class="container mx-auto px-8 -mt-16 relative z-10 pb-20">
-        @guest
-            <section class="bg-white/80 backdrop-blur-xl p-16 rounded-[4rem] shadow-2xl shadow-slate-200/50 border border-white text-center">
-                <div class="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
-                    <i class="bi bi-shield-lock-fill text-4xl text-slate-300"></i>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 uppercase italic tracking-tighter mb-4">Akses Terbatas</h3>
-                <p class="text-slate-400 text-sm font-medium mb-10 max-w-md mx-auto">Untuk menjaga kualitas layanan dan hak cipta, akses katalog lengkap hanya tersedia bagi Civitas Akademika ITH.</p>
-                <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <a href="{{ route('login') }}" class="bg-blue-600 text-white px-12 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-xl shadow-blue-200">Masuk Akun</a>
-                    <a href="{{ route('register') }}" class="bg-white text-slate-600 border border-slate-200 px-12 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition">Registrasi</a>
-                </div>
-            </section>
-        @else
-            <section id="katalog">
-                <div class="flex items-center justify-between mb-12">
-                    <div>
-                        <h2 class="text-3xl font-[900] uppercase italic tracking-tighter text-slate-800">Koleksi <span class="text-blue-600">Terbaru</span></h2>
-                        <div class="h-1 w-12 bg-yellow-400 mt-2"></div>
-                    </div>
-                    <a href="{{ route('katalog.index') }}" class="text-[10px] font-black uppercase text-blue-600 border-b-2 border-blue-100 hover:border-blue-600 transition pb-1">Lihat Semua</a>
-                </div>
-                
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
-                    @forelse($bukuTerbaru as $buku)
+    <main class="container mx-auto px-8 -mt-16 relative z-10 pb-20" id="katalog">
+        <section class="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-xl shadow-slate-200/50 border border-slate-100">
+
+            <div class="mb-12">
+                <h2 class="text-2xl md:text-3xl font-[900] uppercase italic tracking-tight text-slate-800 flex items-center gap-2">
+                    KOLEKSI <span class="text-blue-600">TERBARU</span>
+                </h2>
+                <div class="h-1 w-16 bg-yellow-400 mt-2 rounded-full"></div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                @forelse($bukuTerbaru as $buku)
+                    @php
+                        $bookDetail = json_encode([
+                            'id' => $buku->id,
+                            'judul' => $buku->judul,
+                            'penulis' => $buku->penulis,
+                            'penerbit' => $buku->penerbit ?? '-',
+                            'tahun' => $buku->tahun_terbit ?? '-',
+                            'kategori' => $buku->kategori ?? 'Umum',
+                            'isbn' => $buku->isbn ?? '-',
+                            'stok' => $buku->stok_tersedia ?? 0,
+                            'deskripsi' => $buku->deskripsi ?? 'Tidak ada ringkasan sinopsis untuk buku ini.',
+                            'cover' => $buku->cover ? asset('storage/' . $buku->cover) : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=400'
+                        ]);
+                    @endphp
+
+                    <div @click='selectedBook = {!! $bookDetail !!}'
+                         x-show="search === '' || '{{ strtolower($buku->judul) }}'.includes(search.toLowerCase()) || '{{ strtolower($buku->penulis) }}'.includes(search.toLowerCase())"
+                         class="cursor-pointer transition transform hover:scale-105 duration-300">
                         <x-card-buku :buku="$buku" />
-                    @empty
-                        <div class="col-span-full py-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
-                             <p class="text-slate-400 italic font-bold uppercase tracking-widest text-xs">Belum ada koleksi buku baru.</p>
-                        </div>
-                    @endforelse
-                </div>
-            </section>
-        @endguest
+                    </div>
+                @empty
+                    <div class="col-span-full py-20 text-center bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+                        <i class="bi bi-journal-x text-5xl text-slate-300 block mb-3"></i>
+                        <p class="text-slate-400 italic font-bold uppercase tracking-widest text-xs">Belum ada koleksi data buku di database.</p>
+                    </div>
+                @endforelse
+            </div>
+        </section>
     </main>
+
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+         x-show="selectedBook !== null" x-cloak x-transition>
+
+        <div class="bg-white rounded-[2.5rem] w-full max-w-2xl p-6 md:p-8 shadow-2xl border border-slate-100 overflow-y-auto max-h-[90vh]"
+             @click.away="selectedBook = null">
+
+            <div class="flex justify-between items-start mb-6 gap-4">
+                <div>
+                    <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black uppercase tracking-wider" x-text="selectedBook?.kategori"></span>
+                    <h3 class="text-xl md:text-2xl font-black text-slate-800 mt-2 leading-tight" x-text="selectedBook?.judul"></h3>
+                </div>
+                <button @click="selectedBook = null" class="text-slate-400 hover:text-slate-600 text-xl transition transform hover:rotate-90">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="flex flex-col items-center md:items-start">
+                    <div class="w-40 md:w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+                        <img :src="selectedBook?.cover" class="w-full h-full object-cover">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Sinopsis</h4>
+                            <p class="text-slate-600 text-xs font-medium leading-relaxed mt-1" x-text="selectedBook?.deskripsi"></p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs">
+                            <div>
+                                <p class="text-[9px] font-black text-slate-400 uppercase">Penulis</p>
+                                <p class="font-bold text-slate-700" x-text="selectedBook?.penulis"></p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-black text-slate-400 uppercase">Penerbit</p>
+                                <p class="font-bold text-slate-700" x-text="selectedBook?.penerbit"></p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-black text-slate-400 uppercase">Tahun</p>
+                                <p class="font-bold text-slate-700" x-text="selectedBook?.tahun"></p>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-black text-slate-400 uppercase">ISBN</p>
+                                <p class="font-bold text-slate-700" x-text="selectedBook?.isbn"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 p-4 rounded-2xl flex items-center justify-between text-xs font-bold"
+                         :class="selectedBook?.stok > 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'">
+                        <span x-text="selectedBook?.stok > 0 ? 'Stok Tersedia ('+selectedBook?.stok+')' : 'Stok Kosong'"></span>
+
+                        @guest
+                            <a href="{{ route('login') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition">
+                                Login untuk Pinjam
+                            </a>
+                        @else
+                            <button class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition">
+                                Ajukan Peminjaman
+                            </button>
+                        @endguest
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <footer class="bg-[#1E293B] text-white py-16">
         <div class="container mx-auto px-8 text-center">

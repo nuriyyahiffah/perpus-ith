@@ -15,10 +15,11 @@ class Peminjaman extends Model
     // Sesuaikan fillable dengan database dan controller
     protected $fillable = [
         'user_id',
-        'buku_id', // 
+        'buku_id', //
         'eksemplar_id', // Tambahkan ini
         'no_induk',
         'tgl_pinjam',
+        'tgl_tenggat',
         'tgl_kembali',  // Gunakan tgl_kembali agar konsisten
         'kondisi_kembali',
         'denda_fisik',

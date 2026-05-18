@@ -41,21 +41,29 @@
         </div>
 
         {{-- 3. MANAJEMEN BUKU --}}
-        <div class="menu-item">
-            @php $bukuActive = request()->routeIs('shared.buku.*', 'shared.kategori-buku.*'); @endphp
-            <button onclick="toggleSubmenu('submenu-buku', this)" 
-                class="w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all group {{ $bukuActive ? 'text-blue-400 bg-blue-400/5' : 'hover:bg-slate-800/50' }}">
-                <div class="flex items-center gap-3">
-                    <i class="bi bi-journal-bookmark-fill text-lg"></i>
-                    <span class="text-xs font-bold uppercase tracking-widest">Manajemen Buku</span>
-                </div>
-                <i class="bi bi-chevron-down text-[10px] arrow-icon transition-transform duration-300 {{ $bukuActive ? 'rotate-180' : '' }}"></i>
-            </button>
-            <div id="submenu-buku" class="{{ $bukuActive ? '' : 'hidden' }} space-y-1 mt-1 px-2">
-                <x-sidebar-link href="{{ route('shared.buku.index') }}" label="Katalog Buku" :active="request()->routeIs('shared.buku.*')" />
-                <x-sidebar-link href="{{ route('shared.kategori-buku.index') }}" label="Kategori (Prodi)" :active="request()->routeIs('shared.kategori-buku.*')" />
-            </div>
+<div class="menu-item">
+    {{-- Menambahkan klasifikasi.* agar menu induk tetap aktif saat halaman klasifikasi dibuka --}}
+    @php 
+        $bukuActive = request()->routeIs('shared.buku.*', 'shared.kategori-buku.*', 'klasifikasi.*') || request()->is('shared/klasifikasi*'); 
+    @endphp
+    
+    <button onclick="toggleSubmenu('submenu-buku', this)" 
+        class="w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all group {{ $bukuActive ? 'text-blue-400 bg-blue-400/5' : 'hover:bg-slate-800/50' }}">
+        <div class="flex items-center gap-3">
+            <i class="bi bi-journal-bookmark-fill text-lg"></i>
+            <span class="text-xs font-bold uppercase tracking-widest">Manajemen Buku</span>
         </div>
+        <i class="bi bi-chevron-down text-[10px] arrow-icon transition-transform duration-300 {{ $bukuActive ? 'rotate-180' : '' }}"></i>
+    </button>
+    
+    <div id="submenu-buku" class="{{ $bukuActive ? '' : 'hidden' }} space-y-1 mt-1 px-2">
+        <x-sidebar-link href="{{ route('shared.buku.index') }}" label="Katalog Buku" :active="request()->routeIs('shared.buku.*')" />
+        <x-sidebar-link href="{{ route('shared.kategori-buku.index') }}" label="Kategori (Prodi)" :active="request()->routeIs('shared.kategori-buku.*')" />
+        
+        {{-- Sub Menu Baru: Klasifikasi DDC --}}
+        <x-sidebar-link href="{{ route('shared.klasifikasi.index') }}" label="Klasifikasi DDC" :active="request()->routeIs('klasifikasi.*') || request()->is('shared/klasifikasi*')" />
+    </div>
+</div>
 
         {{-- 4. SIRKULASI --}}
         <div class="menu-item">

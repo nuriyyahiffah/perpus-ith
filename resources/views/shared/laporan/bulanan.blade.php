@@ -20,18 +20,24 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-5">
 
-                 @php
-    // Ambil role dan ubah ke huruf kecil untuk keamanan pengecekan
-    $userRole = strtolower(Auth::user()->role);
-    
-    // Tentukan rute berdasarkan role
-    $targetRoute = ($userRole === 'admin') ? 'sidebar-admin';
-    $targetRoute = ($userRole === 'pustakawan') ?  'sidebar-pustakawan';
-@endphp
+                    @php
+                        // Ambil role dan ubah ke huruf kecil untuk keamanan pengecekan
+                        $userRole = strtolower(Auth::user()->role);
 
-<a href="{{ route($targetRoute) }}" class="bg-white/10 hover:bg-white/20 h-10 w-10 rounded-xl flex items-center justify-center transition">
-    <i class="bi bi-arrow-left text-xl"></i>
-</a>
+                        // Tentukan rute dengan struktur if-else agar tidak saling menimpa
+                        if ($userRole === 'admin') {
+                            $targetRoute = 'admin.dashboard';
+                        } elseif ($userRole === 'pustakawan') {
+                            $targetRoute = 'pustakawan.dashboard';
+                        } else {
+                            $targetRoute = 'dashboard'; // fallback jika role tidak dikenali
+                        }
+                    @endphp
+
+                    <a href="{{ route($targetRoute) }}" class="bg-white/10 hover:bg-white/20 h-10 w-10 rounded-xl flex items-center justify-center transition">
+                        <i class="bi bi-arrow-left text-xl"></i>
+                    </a>
+
                     <img src="{{ asset('images/logo_ith.png') }}" alt="Logo ITH" class="h-14 w-auto">
                     <div class="border-l border-white/20 pl-5">
                         <h1 class="text-2xl font-black uppercase tracking-tight">Laporan Bulanan</h1>
@@ -39,8 +45,7 @@
                     </div>
                 </div>
                 <div class="flex gap-3">
-                    {{-- Perbaikan: Route disamakan dengan web.php --}}
-                    <a href="{{ route('shared.laporan.export_pdf', ['bulan' => $bulan, 'tahun' => $tahun]) }}" 
+                    <a href="{{ route('shared.laporan.export_pdf', ['bulan' => $bulan, 'tahun' => $tahun]) }}"
                        class="bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 rounded-xl text-sm font-bold uppercase transition shadow-lg flex items-center">
                         <i class="bi bi-file-earmark-pdf me-2"></i> Export PDF
                     </a>
@@ -102,8 +107,8 @@
                     <canvas id="monthlyTrendChart"></canvas>
                 </div>
             </div>
-            
-            {{-- DATA TABEL TRANSAKSI (Sesuai Urutan PDF) --}}
+
+            {{-- DATA TABEL TRANSAKSI --}}
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
                 <div class="p-6 border-b border-slate-50 bg-slate-50/50">
                     <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Detail Transaksi Bulan Ini</h3>
@@ -122,42 +127,31 @@
                         </thead>
 
                         <tbody class="divide-y divide-slate-100 text-sm font-medium text-slate-600">
-    @forelse($dataTransaksi as $index => $item)
-    <tr class="hover:bg-slate-50/50 transition">
-        <td class="px-6 py-4">{{ $index + 1 }}</td>
-        
-        {{-- Tanggal Pinjam --}}
-        <td class="px-6 py-4">{{ \Carbon\Carbon::parse($item->tgl_pinjam)->format('d/m/Y') }}</td>
-        
-        {{-- Nama Anggota --}}
-        <td class="px-6 py-4 text-slate-900 font-bold">{{ $item->user->name }}</td>
-        
-        {{-- Judul Buku (Diambil dari relasi eksemplar ke buku) --}}
-        <td class="px-6 py-4">{{ $item->eksemplar->buku->judul ?? '-' }}</td>
-        
-        {{-- No. Induk (Diambil langsung dari tabel eksemplar) --}}
-        <td class="px-6 py-4 text-center">
-            <span class="bg-slate-100 px-2 py-1 rounded text-xs font-mono font-bold text-slate-700">
-                {{ $item->eksemplar->no_induk ?? '-' }}
-            </span>
-        </td>
-        
-        {{-- Status --}}
-        <td class="px-6 py-4 text-center">
-            @if($item->status == 'dipinjam')
-                <span class="text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-xs font-bold uppercase">Dipinjam</span>
-            @else
-                <span class="text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-xs font-bold uppercase">Kembali</span>
-            @endif
-        </td>
-    </tr>
-    @empty
-    <tr>
-        <td colspan="6" class="px-6 py-10 text-center text-slate-400 font-bold italic">Tidak ada data transaksi ditemukan.</td>
-    </tr>
-    @endforelse
-</tbody>
-
+                            @forelse($dataTransaksi as $index => $item)
+                            <tr class="hover:bg-slate-50/50 transition">
+                                <td class="px-6 py-4">{{ $index + 1 }}</td>
+                                <td class="px-6 py-4">{{ \Carbon\Carbon::parse($item->tgl_pinjam)->format('d/m/Y') }}</td>
+                                <td class="px-6 py-4 text-slate-900 font-bold">{{ $item->user->name }}</td>
+                                <td class="px-6 py-4">{{ $item->eksemplar->buku->judul ?? '-' }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="bg-slate-100 px-2 py-1 rounded text-xs font-mono font-bold text-slate-700">
+                                        {{ $item->eksemplar->no_induk ?? '-' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    @if($item->status == 'dipinjam')
+                                        <span class="text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-xs font-bold uppercase">Dipinjam</span>
+                                    @else
+                                        <span class="text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-xs font-bold uppercase">Kembali</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="6" class="px-6 py-10 text-center text-slate-400 font-bold italic">Tidak ada data transaksi ditemukan.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -197,7 +191,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
             const trenData = @json($trenHarian);
-            
+
             new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -225,7 +219,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { position: 'top', labels: { font: { weight: 'bold' } } } },
-                    scales: { 
+                    scales: {
                         y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' }, grid: { color: '#f1f5f9' } },
                         x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
                     }

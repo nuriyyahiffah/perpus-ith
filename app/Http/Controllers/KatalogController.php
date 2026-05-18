@@ -14,6 +14,23 @@ class KatalogController extends Controller
     public function index(Request $request)
     {
         $query = Buku::query();
+        $prodiDipilih = $request->get('prodi'); // Tangkap input filter prodi
+
+        /*
+        |--------------------------------------------------------------------------
+        | FILTER PRODI (Rekomendasi Kaprodi via Tabel Jembatan)
+        |--------------------------------------------------------------------------
+        | Kita taruh filter prodi di atas agar pencarian kata kunci bisa mengkerucut
+        | di dalam lingkup prodi yang dipilih.
+        */
+        if ($prodiDipilih) {
+            // PERBAIKAN: Menggunakan relasi serbaguna. Pastikan di Model Buku.php
+            // ada fungsi bernama bukuProdi() atau prodiRekomendasi().
+            // Di sini kita coba pakai 'bukuProdi'. Jika di model Anda bernama 'prodiRekomendasi', silakan ganti teks ini.
+            $query->whereHas('bukuProdi', function($q) use ($prodiDipilih) {
+                $q->where('nama_prodi', $prodiDipilih);
+            });
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -26,7 +43,6 @@ class KatalogController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('judul', 'like', '%' . $search . '%')
                   ->orWhere('penulis', 'like', '%' . $search . '%')
-                  // Kolom 'kategori' dihapus karena menyebabkan error (tidak ada di tabel buku)
                   ->orWhere('tahun_terbit', 'like', '%' . $search . '%');
             });
         }
@@ -37,40 +53,46 @@ class KatalogController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($request->sort == 'a-z') {
-            // Judul A-Z
             $query->orderBy('judul', 'asc');
-        } 
+        }
         elseif ($request->sort == 'z-a') {
-            // Judul Z-A
             $query->orderBy('judul', 'desc');
-        } 
-        elseif ($request->sort == 'terbaru') {
-            // Tahun terbaru (Menggunakan tahun_terbit sesuai database)
+        }
+        elseif ($request->sort == 'terbaru' || $request->sort == 'baru') {
             $query->orderByRaw('CAST(tahun_terbit AS UNSIGNED) DESC');
-        } 
+        }
         elseif ($request->sort == 'lama') {
-            // Tahun terlama
             $query->orderByRaw('CAST(tahun_terbit AS UNSIGNED) ASC');
-        } 
+        }
         else {
-            // Default terbaru berdasarkan waktu input (created_at)
             $query->latest();
         }
 
         /*
         |--------------------------------------------------------------------------
-        | PAGINATION (Pembagian Halaman)
+        | PAGINATION & DATA FETCHING
         |--------------------------------------------------------------------------
+        | PERBAIKAN: Baik Guest maupun Auth HARUS menggunakan ->paginate()
+        | agar fungsi ->total() dan ->links() di file Blade tidak memicu error crash!
         */
         if (Auth::check()) {
-            // User login bisa lihat banyak buku dengan pagination
+            // User login bisa melihat 15 buku per halaman
             $buku = $query->paginate(15)->withQueryString();
         } else {
-            // Pengunjung umum hanya lihat 8 buku tanpa pagination
-            $buku = $query->take(8)->get();
+            // Pengunjung umum dibatasi hanya 8 buku, namun tetap berwujud objek paginator
+            $buku = $query->paginate(8)->withQueryString();
         }
 
-        return view('katalog.index', compact('buku'));
+        // Daftar resmi Program Studi di ITH untuk di-render ke dropdown HTML
+        $daftarProdi = [
+            'Ilmu Komputer',
+            'Sistem Informasi',
+            'Teknik Sipil',
+            'Matematika'
+        ];
+
+        // Masukkan semua variabel ke view
+        return view('katalog.index', compact('buku', 'daftarProdi', 'prodiDipilih'));
     }
 
     /**

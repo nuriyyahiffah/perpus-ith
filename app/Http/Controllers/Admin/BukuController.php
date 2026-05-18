@@ -49,8 +49,12 @@ class BukuController extends Controller
         return view('shared.buku.edit_buku', compact('buku', 'kategori'));
     }
 
+
     /**
-     * Simpan Perubahan Buku (Update)
+     * Simpan Perubahan Buku (Update Data Katalog & Fisik Eksemplar)
+     */
+    /**
+     * Simpan Perubahan Buku (Update Data Katalog & Manual Eksemplar)
      */
     public function update(Request $request, $id)
     {
@@ -58,36 +62,105 @@ class BukuController extends Controller
             'judul'                => 'required|string|max:255',
             'penulis'              => 'required|string',
             'klasifikasi'          => 'required',
-            'tempat_penerbit'             => 'required',
+            'tempat_terbit'        => 'required|string',
+            'penerbit'             => 'required|string',
             'tahun_terbit'         => 'required|numeric|digits:4',
             'tipe_pengarang_utama' => 'required|string',
-            'peran_tambahan'       => 'nullable|string',
-            'pengarang_tambahan'   => 'nullable|string',
             'gambar_buku'          => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            
+            // Validasi baru untuk input manual eksemplar
+            'total_stok'           => 'required|integer|min:0',
+            'no_induk'             => 'nullable|array',
+            'no_induk.*'           => 'required_with:no_induk|string|distinct', // Memastikan input tidak boleh kembar di form
         ]);
 
         $buku = Buku::findOrFail($id);
-        
-        try {
-            $data = $request->except('gambar_buku');
+        DB::beginTransaction();
 
+        try {
+            $data = $request->except(['gambar_buku', 'total_stok', 'jenis_sumber', 'no_induk', 'no_barcode']);
+
+            // Handler File Gambar
             if ($request->hasFile('gambar_buku')) {
-                // Hapus gambar lama
                 if ($buku->gambar_buku && File::exists(public_path('images/' . $buku->gambar_buku))) {
                     File::delete(public_path('images/' . $buku->gambar_buku));
                 }
-
                 $file = $request->file('gambar_buku');
                 $namaGambar = time() . '_' . Str::slug($request->judul) . '.' . $file->getClientOriginalExtension();
                 $file->move(public_path('images'), $namaGambar);
                 $data['gambar_buku'] = $namaGambar;
             }
 
+            // MODUL 1: Update Data Katalog Utama
             $buku->update($data);
 
-            return redirect()->route('shared.buku.index')->with('success', 'Katalog berhasil diperbarui!');
+            // MODUL 2: Sinkronisasi Manual Fisik Buku (Tabel Eksemplar)
+            $jumlahFisikBaru = intval($request->total_stok);
+            $noIndukInputs = $request->input('no_induk', []);
+            $noBarcodeInputs = $request->input('no_barcode', []);
+
+            // Ambil data eksemplar yang sudah ada di database saat ini
+            $eksemplarSeksrang = $buku->eksemplars;
+            $jumlahFisikSekarang = $eksemplarSeksrang->count();
+
+            if ($jumlahFisikBaru > $jumlahFisikSekarang) {
+                // Skenario A: Ada penambahan unit, ambil sisa data inputan baru yang berada di luar jumlah sekarang
+                for ($i = $jumlahFisikSekarang; $i < $jumlahFisikBaru; $i++) {
+                    if (isset($noIndukInputs[$i])) {
+                        // Cek apakah nomor induk sudah dipakai oleh buku lain di database (karena unique)
+                        $cekUnique = Eksemplar::where('no_induk', trim($noIndukInputs[$i]))->exists();
+                        if ($cekUnique) {
+                            throw new \Exception("Nomor Induk '" . $noIndukInputs[$i] . "' sudah digunakan oleh koleksi lain!");
+                        }
+
+                        $buku->eksemplars()->create([
+                            'no_induk'      => trim($noIndukInputs[$i]),
+                            'no_barcode'    => isset($noBarcodeInputs[$i]) ? trim($noBarcodeInputs[$i]) : null,
+                            'no_rfid'       => null,
+                            'status'        => 'Tersedia',
+                            'jenis_sumber'  => $request->jenis_sumber ?? 'Pembelian',
+                            'bentuk_fisik'  => $buku->bentuk_fisik ?? 'Buku',
+                            'tgl_pengadaan' => now(),
+                        ]);
+                    }
+                }
+            } elseif ($jumlahFisikBaru < $jumlahFisikSekarang) {
+                // Skenario B: Stok dikurangi, hapus kelebihannya dari yang berstatus 'Tersedia'
+                $selisihKurang = $jumlahFisikSekarang - $jumlahFisikBaru;
+                $eksemplarDihapus = $buku->eksemplars()->where('status', 'Tersedia')->take($selisihKurang)->get();
+                
+                foreach ($eksemplarDihapus as $item) {
+                    $item->delete();
+                }
+            }
+
+            // Update data eksemplar lama jika nomor induk/barcodenya ikut diedit di form
+            foreach ($buku->eksemplars()->get() as $index => $eksemplarLama) {
+                if (isset($noIndukInputs[$index])) {
+                    // Pastikan tidak tabrakan unique dengan data lain saat mengupdate diri sendiri
+                    $cekUniqueUpdate = Eksemplar::where('no_induk', trim($noIndukInputs[$index]))
+                                                ->where('id', '!=', $eksemplarLama->id)
+                                                ->exists();
+                    if ($cekUniqueUpdate) {
+                        throw new \Exception("Nomor Induk '" . $noIndukInputs[$index] . "' sudah digunakan!");
+                    }
+
+                    $eksemplarLama->update([
+                        'no_induk'   => trim($noIndukInputs[$index]),
+                        'no_barcode' => isset($noBarcodeInputs[$index]) ? trim($noBarcodeInputs[$index]) : null,
+                    ]);
+                }
+            }
+
+            // Selaraskan jumlah total riil ke kolom 'stok' di tabel buku
+            $buku->update(['stok' => $buku->eksemplars()->count()]);
+
+            DB::commit();
+            return redirect()->route('shared.buku.index')->with('success', 'Katalog dan Unit Eksemplar berhasil diperbarui!');
+
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Gagal memperbarui data: ' . $e->getMessage()]);
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Gagal memperbarui data: ' . $e->getMessage()])->withInput();
         }
     }
 

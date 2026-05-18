@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Buku;
 use App\Models\Claim;
+use App\Models\BukuProdi; // 1. TAMBAHKAN MODEL INI
 use Illuminate\Support\Facades\Auth;
 
 class ClaimController extends Controller
@@ -12,43 +13,42 @@ class ClaimController extends Controller
     /**
      * Menampilkan halaman klaim dengan 2 sisi (Judul & Centang) serta sistem Tab.
      */
-   public function index(Request $request)
-{
-    /** @var \App\Models\User $user */
-    $user = Auth::user();
-    $prodiUser = $user->prodi;
-    $tab = $request->query('tab', 'semua');
-    $search = $request->input('search');
+    public function index(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $prodiUser = $user->prodi;
+        $tab = $request->query('tab', 'semua');
+        $search = $request->input('search');
 
-    // Ambil semua ID buku yang sudah dicentang oleh prodi ini
-    $claimedIds = Claim::where('prodi', $prodiUser)->pluck('buku_id')->toArray();
+        // Ambil semua ID buku yang sudah dicentang oleh prodi ini
+        $claimedIds = Claim::where('prodi', $prodiUser)->pluck('buku_id')->toArray();
 
-    // Mulai Query Buku
-    $query = Buku::query();
+        // Mulai Query Buku
+        $query = Buku::query();
 
-    // Fitur pencarian
-    if ($search) {
-        $query->where(function($q) use ($search) {
-            $q->where('judul', 'LIKE', "%{$search}%")
-              ->orWhere('penulis', 'LIKE', "%{$search}%");
-        });
+        // Fitur pencarian
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('judul', 'LIKE', "%{$search}%")
+                  ->orWhere('penulis', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Logika Tab
+        if ($tab == 'prodi') {
+            $query->whereIn('id', $claimedIds);
+        } elseif ($tab == 'belum') {
+            $query->whereNotIn('id', $claimedIds);
+        }
+
+        // Eksekusi Pagination dengan limit 5 buku
+        $bukus = $query->latest()
+                       ->paginate(5)
+                       ->appends(['tab' => $tab, 'search' => $search]);
+
+        return view('dosen.claim', compact('bukus', 'claimedIds', 'tab', 'search'));
     }
-
-    // Logika Tab
-    if ($tab == 'prodi') {
-        $query->whereIn('id', $claimedIds);
-    } elseif ($tab == 'belum') {
-        $query->whereNotIn('id', $claimedIds);
-    }
-
-    // Eksekusi Pagination dengan limit 5 buku
-    // appends() memastikan saat klik "Halaman 2", filter search & tab tidak hilang
-    $bukus = $query->latest()
-                   ->paginate(5)
-                   ->appends(['tab' => $tab, 'search' => $search]);
-
-    return view('dosen.claim', compact('bukus', 'claimedIds', 'tab', 'search'));
-}
 
     /**
      * Logika Toggle AJAX untuk centang otomatis
@@ -64,9 +64,17 @@ class ClaimController extends Controller
                       ->first();
 
         if ($claim) {
+            // JIKA DICENTANG ULANG (UNCHECK / APUS KLAIM)
             $claim->delete();
+
+            // 2. PERBAIKAN: Hapus juga datanya dari tabel jembatan buku_prodi
+            BukuProdi::where('buku_id', $bukuId)
+                     ->where('nama_prodi', $prodi)
+                     ->delete();
+
             return response()->json(['status' => 'removed', 'message' => 'Buku dihapus dari prodi']);
         } else {
+            // JIKA BARU DICENTANG (CHECK / BUAT KLAIM BARU)
             Claim::create([
                 'user_id' => $user->id,
                 'buku_id' => $bukuId,
@@ -74,6 +82,13 @@ class ClaimController extends Controller
                 'no_induk_prodi' => $user->nomor_identitas,
                 'status'  => 'disetujui',
             ]);
+
+            // 3. PERBAIKAN: Masukkan data duplikat ke tabel jembatan buku_prodi agar terbaca di katalog
+            BukuProdi::create([
+                'buku_id'    => $bukuId,
+                'nama_prodi' => $prodi
+            ]);
+
             return response()->json(['status' => 'added', 'message' => 'Buku berhasil diklaim']);
         }
     }

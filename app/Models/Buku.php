@@ -9,7 +9,7 @@ class Buku extends Model
 {
     use HasFactory;
 
-    // Menentukan nama tabel secara eksplisit karena namannya 'buku' (bukan jamak 'bukus')
+    // Menentukan nama tabel secara eksplisit karena namanya 'buku' (bukan jamak 'bukus')
     protected $table = 'buku';
 
     protected $fillable = [
@@ -19,16 +19,15 @@ class Buku extends Model
         'no_induk',
         'penulis',
         'sinopsis',
-        'jumlah_halaman',
-        'tipe_pengarang_utama', 
-        'peran_tambahan',      
-        'pengarang_tambahan',   
+        'jumlah_halaman', // PERBAIKAN: Duplikasi baris jumlah_halaman yang di bawah sudah dihapus
+        'tipe_pengarang_utama',
+        'peran_tambahan',
+        'pengarang_tambahan',
         'klasifikasi',
         'no_panggil',
         'penerbit',
         'tahun_terbit',
         'tempat_terbit',
-        'jumlah_halaman',
         'bahasa',
         'kategori_id',
         'gambar_buku',
@@ -36,32 +35,53 @@ class Buku extends Model
         'prodi'
     ];
 
-    public function kategori()
-{
-    // Gunakan belongsTo karena satu buku biasanya memiliki satu kategori
-    return $this->belongsTo(Kategori::class, 'kategori_id');
-}
-
-// app/Models/Buku.php
-
-public function claims()
-{
-    // Relasi ke model Claim menggunakan foreign key 'buku_id'
-    return $this->hasMany(Claim::class, 'buku_id');
-}
     /**
-     * Relasi ke model Eksemplar.
-     * Nama fungsi diubah menjadi jamak (eksemplars) agar sesuai dengan 
-     * standar Laravel 'Has Many' dan panggilan di file Blade.
+     * Relasi ke model Kategori
+     */
+    public function kategori()
+    {
+        return $this->belongsTo(Kategori::class, 'kategori_id');
+    }
+
+    /**
+     * Relasi ke model Claim
+     */
+    public function claims()
+    {
+        return $this->hasMany(Claim::class, 'buku_id');
+    }
+
+    /**
+     * Relasi ke model Eksemplar
      */
     public function eksemplars()
     {
-        // Pastikan foreign key 'buku_id' sesuai dengan yang ada di tabel eksemplars
         return $this->hasMany(Eksemplar::class, 'buku_id');
     }
 
+    /**
+     * Relasi ke model Peminjaman
+     */
     public function peminjaman()
-{
-    return $this->hasMany(Peminjaman::class, 'buku_id');
-}
+    {
+        return $this->hasMany(Peminjaman::class, 'buku_id');
+    }
+
+    /**
+     * Relasi ke tabel jembatan buku_prodi
+     * PERBAIKAN: Kita satukan fungsionalitasnya di sini agar seragam dengan KatalogController
+     * dan mendukung pemanggilan via prodiRekomendasi jika ada view lain yang membutuhkannya.
+     */
+    public function bukuProdi()
+    {
+        return $this->hasMany(BukuProdi::class, 'buku_id', 'id');
+    }
+
+    /**
+     * Alias relasi untuk keamanan kompabilitas kode lama Anda
+     */
+    public function prodiRekomendasi()
+    {
+        return $this->hasMany(BukuProdi::class, 'buku_id', 'id');
+    }
 }

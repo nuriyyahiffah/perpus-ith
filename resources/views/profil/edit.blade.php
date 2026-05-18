@@ -22,21 +22,27 @@
         <main class="flex-1 py-12 px-6 md:px-12">
             <div class="max-w-4xl mx-auto">
 
-                <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+                {{-- RE-STRUKTUR HEADER: TOMBOL KEMBALI DI SEBELAH KIRI --}}
+                <div class="flex flex-col space-y-4 mb-10">
                     <div>
-                        <div class="flex items-center space-x-3 mb-2">
-                            <div class="w-2 h-8 bg-yellow-400 rounded-full"></div>
-                            <h1 class="text-4xl font-extrabold text-[#2D3E50] tracking-tight">
-                                Pengaturan <span class="text-blue-600">Profil</span>
-                            </h1>
-                        </div>
-                        <p class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] ml-5">
-                            Identitas Digital {{ Auth::user()->role }} ITH
-                        </p>
+                        <a href="@if(Auth::user()->role === 'mahasiswa'){{ route('mahasiswa.beranda') }}@elseif(Auth::user()->role === 'dosen'){{ route('dosen.beranda') }}@else{{ url('/') }}@endif" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-blue-600 transition bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm w-fit">
+                            <i class="bi bi-arrow-left me-2"></i> KEMBALI KE BERANDA
+                        </a>
                     </div>
-                    <a href="@if(Auth::user()->role === 'mahasiswa'){{ route('mahasiswa.beranda') }}@elseif(Auth::user()->role === 'dosen'){{ route('dosen.beranda') }}@else{{ url('/') }}@endif" class="flex items-center text-xs font-bold text-slate-500 hover:text-[#2D3E50] transition">
-                        <i class="bi bi-arrow-left me-2"></i> KEMBALI KE BERANDA
-                    </a>
+
+                    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-2">
+                        <div>
+                            <div class="flex items-center space-x-3 mb-2">
+                                <div class="w-2 h-8 bg-yellow-400 rounded-full"></div>
+                                <h1 class="text-4xl font-extrabold text-[#2D3E50] tracking-tight">
+                                    Pengaturan <span class="text-blue-600">Profil</span>
+                                </h1>
+                            </div>
+                            <p class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] ml-5">
+                                Identitas Digital {{ Auth::user()->role }} ITH
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- NOTIFIKASI SUKSES --}}
@@ -158,37 +164,36 @@
                                     </div>
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {{-- Password Baru --}}
-    <div class="space-y-2">
-        <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Password Baru</label>
-        <div class="relative group">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-rose-500">
-                <i class="bi bi-shield-lock"></i>
-            </div>
-            <input type="password"
-                   name="password"
-                   autocomplete="new-password"
-                   class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 block pl-11 p-4 transition-all"
-                   placeholder="Kosongkan jika tidak diubah">
-        </div>
-    </div>
+                                        {{-- Password Baru --}}
+                                        <div class="space-y-2">
+                                            <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Password Baru</label>
+                                            <div class="relative group">
+                                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-rose-500">
+                                                    <i class="bi bi-shield-lock"></i>
+                                                </div>
+                                                <input type="password"
+                                                       name="password"
+                                                       autocomplete="new-password"
+                                                       class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 block pl-11 p-4 transition-all"
+                                                       placeholder="Kosongkan jika tidak diubah">
+                                            </div>
+                                        </div>
 
-    {{-- Konfirmasi Password --}}
-    <div class="space-y-2">
-        <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Konfirmasi Password</label>
-        <div class="relative group">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-rose-500">
-                <i class="bi bi-shield-check"></i>
-            </div>
-            <input type="password"
-                   name="password_confirmation"
-                   autocomplete="new-password"
-                   class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 block pl-11 p-4 transition-all"
-                   placeholder="Ulangi password baru">
-        </div>
-    </div>
-</div>
-
+                                        {{-- Konfirmasi Password --}}
+                                        <div class="space-y-2">
+                                            <label class="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Konfirmasi Password</label>
+                                            <div class="relative group">
+                                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-rose-500">
+                                                    <i class="bi bi-shield-check"></i>
+                                                </div>
+                                                <input type="password"
+                                                       name="password_confirmation"
+                                                       autocomplete="new-password"
+                                                       class="w-full bg-slate-50 border border-slate-200 text-[#2D3E50] text-xs font-bold rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 block pl-11 p-4 transition-all"
+                                                       placeholder="Ulangi password baru">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="pt-4">
@@ -216,31 +221,28 @@
         </main>
     </div>
 
+    {{-- JAVASCRIPT VALIDASI DIUPDATE AGAR KURSOR NORMAL --}}
     <script>
-        // Validasi nomor WhatsApp - hanya angka yang dibolehkan
         const noTelpInput = document.querySelector('input[name="no_telp"]');
 
         if (noTelpInput) {
             noTelpInput.addEventListener('input', function(e) {
-                // Simpan posisi cursor
                 const cursorPos = this.selectionStart;
+                const originalLength = this.value.length;
 
-                // Ambil nilai asli
-                const originalValue = this.value;
+                // Membersihkan karakter selain angka
+                const cleanedValue = this.value.replace(/[^0-9]/g, '');
+                this.value = cleanedValue;
 
-                // Hapus semua karakter yang bukan angka
-                this.value = this.value.replace(/[^0-9]/g, '');
+                // Menghitung selisih panjang string agar posisi kursor tetap akurat dan tidak melompat maju
+                const lengthDiff = originalLength - cleanedValue.length;
+                this.selectionStart = this.selectionEnd = cursorPos - lengthDiff;
 
-                // Jika ada perubahan (ada karakter non-angka), tampilkan notifikasi
-                if (originalValue !== this.value && originalValue.length > 0) {
+                if (lengthDiff > 0) {
                     showNotification('Hanya angka yang dibolehkan!', 'error');
                 }
-
-                // Restore posisi cursor
-                this.selectionStart = this.selectionEnd = cursorPos - 1;
             });
 
-            // Validasi on blur untuk pesan lebih detail
             noTelpInput.addEventListener('blur', function() {
                 if (this.value && !/^\d{9,15}$/.test(this.value)) {
                     showNotification('Nomor WhatsApp harus 9-15 digit angka', 'error');
@@ -250,15 +252,10 @@
             });
         }
 
-        // Fungsi untuk menampilkan notifikasi
         function showNotification(message, type = 'info') {
-            // Hapus notifikasi sebelumnya jika ada
             const existingNotif = document.getElementById('validation-notification');
-            if (existingNotif) {
-                existingNotif.remove();
-            }
+            if (existingNotif) { existingNotif.remove(); }
 
-            // Buat elemen notifikasi baru
             const notification = document.createElement('div');
             notification.id = 'validation-notification';
 
@@ -273,11 +270,7 @@
             `;
 
             document.body.appendChild(notification);
-
-            // Hapus notifikasi setelah 3 detik
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
+            setTimeout(() => { notification.remove(); }, 3000);
         }
     </script>
 

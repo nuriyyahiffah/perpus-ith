@@ -21,16 +21,16 @@ class AuthController extends Controller
         // 1. Validasi Input (Pastikan @csrf ada di view login.blade.php)
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required', 
+            'password' => 'required',
         ]);
 
         $email = $request->email;
         $passwordInput = $request->password;
 
         // 2. CEK KE TABEL SIAKAD MOCKUP (Khusus Mahasiswa)
-        $mhsSiakad = DB::table('siakad_mahasiswa')
+        $mhsSiakad = DB::table('users')
                         ->where('email', $email)
-                        ->where('nim', $passwordInput)
+                        ->where('nomor_identitas', $passwordInput)
                         ->first();
 
         if ($mhsSiakad) {
@@ -84,12 +84,12 @@ class AuthController extends Controller
 
         if ($role === 'admin') {
             return redirect()->route('admin.dashboard');
-        } 
-        
+        }
+
         if ($role === 'pustakawan') {
             return redirect()->route('pustakawan.dashboard');
-        } 
-        
+        }
+
         if ($role === 'dosen' || $role === 'kaprodi') {
             // Pastikan di web.php sudah ada ->name('dosen.beranda')
             return redirect()->route('dosen.beranda');

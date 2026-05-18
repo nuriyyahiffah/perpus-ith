@@ -16,12 +16,21 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-[#F1F5F9] antialiased">
+<body class="bg-[#F1F5F9] antialiased" x-data="{ openModal: false, openEditModal: false, search: '', editData: {}, editAction: '' }">
 
     <div class="flex min-h-screen">
         @include('layouts.partials.sidebar-admin')
 
         <main class="flex-1 p-8 lg:p-12 overflow-y-auto">
+
+            {{-- Menampilkan alert jika sukses menyimpan --}}
+            @if(session('success'))
+                <div class="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-2xl text-xs font-bold flex items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-sm"></i>
+                    {{ session('success') }}
+                </div>
+            @endif
+
             <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
                     <h1 class="text-3xl font-[900] text-slate-800 uppercase italic tracking-tighter leading-none">
@@ -30,7 +39,7 @@
                     <p class="text-slate-500 text-sm mt-2 font-semibold italic">Manajemen Staf Pengelola Perpustakaan ITH</p>
                 </div>
 
-                <button class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 active:scale-95">
+                <button @click="openModal = true" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 active:scale-95">
                     <i class="bi bi-person-plus-fill text-sm"></i>
                     Tambah Pustakawan
                 </button>
@@ -48,7 +57,7 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden" x-data="{ search: '' }">
+            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-50 flex flex-col md:flex-row justify-between gap-4 bg-slate-50/30">
                     <div class="relative w-full md:w-96">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-5 text-slate-400">
@@ -80,7 +89,7 @@
                                         </div>
                                         <div>
                                             <p class="font-bold text-slate-700 text-sm uppercase leading-tight">{{ $p->name }}</p>
-                                            <p class="text-[10px] text-blue-600 font-black mt-1 tracking-wider italic">ID: {{ $p->nip ?? 'PS-'.str_pad($p->id, 3, '0', STR_PAD_LEFT) }}</p>
+                                            <p class="text-[10px] text-blue-600 font-black mt-1 tracking-wider italic">ID / NIP: {{ $p->nip ?? 'PS-'.str_pad($p->id, 3, '0', STR_PAD_LEFT) }}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -98,7 +107,18 @@
                                 </td>
                                 <td class="px-8 py-6">
                                     <div class="flex justify-center gap-2">
-                                        <button title="Edit Data" class="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                        <button title="Edit Data"
+                                            @click="
+                                                editData = {
+                                                    name: '{{ $p->name }}',
+                                                    nip: '{{ $p->nip }}',
+                                                    email: '{{ $p->email }}',
+                                                    no_hp: '{{ $p->no_hp }}'
+                                                };
+                                                editAction = '{{ route('admin.pustakawan.update', $p->id) }}';
+                                                openEditModal = true;
+                                            "
+                                            class="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
 
@@ -126,6 +146,116 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    {{-- ================= FORM MODAL TAMBAH PUSTAKAWAN (ALPINJS) ================= --}}
+    <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/50 backdrop-blur-sm"
+         x-show="openModal" x-cloak x-transition>
+
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl border border-slate-100 m-4"
+             @click.away="openModal = false">
+
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-[900] text-slate-800 uppercase tracking-tight">Tambah <span class="text-blue-600">Pustakawan</span></h3>
+                <button @click="openModal = false" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+            </div>
+
+            <form action="{{ route('admin.pustakawan.store') }}" method="POST">
+                @csrf
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Nama Lengkap</label>
+                        <input type="text" name="name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">NIP / Nomor Identitas</label>
+                        <input type="text" name="nip" placeholder="Contoh: 1995..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Alamat Email</label>
+                        <input type="email" name="email" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Nomor WhatsApp</label>
+                        <input type="text" name="no_hp" placeholder="08..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Password Login</label>
+                        <input type="password" name="password" required placeholder="Minimal 8 karakter" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" @click="openModal = false" class="px-5 py-3 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition">Batal</button>
+                    <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-blue-500/20">Simpan Akun</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    {{-- ================= FORM MODAL EDIT PUSTAKAWAN (BARU) ================= --}}
+    <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/50 backdrop-blur-sm"
+         x-show="openEditModal" x-cloak x-transition>
+
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl border border-slate-100 m-4"
+             @click.away="openEditModal = false">
+
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-[900] text-slate-800 uppercase tracking-tight">Edit <span class="text-blue-600">Pustakawan</span></h3>
+                <button @click="openEditModal = false" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+            </div>
+
+            <form :action="editAction" method="POST">
+                @csrf
+                @method('PUT') {{-- Menggunakan PUT untuk rute update Laravel --}}
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Nama Lengkap</label>
+                        <input type="text" name="name" x-model="editData.name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">NIP / Nomor Identitas</label>
+                        <input type="text" name="nip" x-model="editData.nip" placeholder="Contoh: 1995..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Alamat Email</label>
+                        <input type="email" name="email" x-model="editData.email" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Nomor WhatsApp</label>
+                        <input type="text" name="no_hp" x-model="editData.no_hp" placeholder="08..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div class="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-[10px] text-amber-700 font-bold uppercase tracking-wide">
+                        <i class="bi bi-info-circle-fill me-1"></i> Biarkan input password kosong jika tidak ingin menggantinya.
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Ganti Password Baru (Opsional)</label>
+                        <input type="password" name="password" placeholder="Isi jika ingin ganti password" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" @click="openEditModal = false" class="px-5 py-3 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition">Batal</button>
+                    <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-blue-500/20">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
     </div>
 
 </body>

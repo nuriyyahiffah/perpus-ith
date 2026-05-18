@@ -30,6 +30,7 @@ Route::get('/buku/detail/{id}', [BukuController::class, 'showDetail'])->name('bu
 // Katalog publik (halaman katalog terpisah)
 Route::get('/katalog', [KatalogController::class, 'index'])->name('katalog.index');
 Route::get('/katalog/{id}', [KatalogController::class, 'showDetail'])->name('katalog.show');
+Route::get('/katalog-publik', [LandingController::class, 'katalog'])->name('katalog.publik');
 
 // Auth
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -72,10 +73,10 @@ Route::middleware(['auth'])->group(function () {
     // Route tunggal untuk semua role
     Route::post('/reservasi/store/{buku_id}', [App\Http\Controllers\ReservationController::class, 'store'])
          ->name('reservasi.store');
-    
+
     Route::get('/reservasi', [App\Http\Controllers\ReservationController::class, 'index'])
          ->name('reservasi.index');
-    
+
     Route::delete('/reservasi/{id}', [App\Http\Controllers\ReservationController::class, 'destroy'])
          ->name('reservasi.destroy');
 
@@ -98,6 +99,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('buku/klasifikasi/{kode}', [AdminBukuController::class, 'klasifikasi'])->name('buku.klasifikasi');
         Route::get('/buku/{id}/edit', [BukuController::class, 'edit'])->name('buku.edit');
         Route::put('/buku/{id}/update', [BukuController::class, 'update'])->name('buku.update');
+        // Route resource ke KlasifikasiController
+        Route::resource('klasifikasi', \App\Http\Controllers\KlasifikasiController::class);
 
         // MANAJEMEN PENGGUNA
         Route::resource('mahasiswa', MahasiswaController::class);
@@ -140,7 +143,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/peminjaman/store', 'store')->name('peminjaman.store');
             Route::post('/peminjaman/kembali/{id}', 'kembalikan')->name('peminjaman.kembali');
             Route::patch('/transaksi/{id}/extend', 'extend')->name('peminjaman.extend');
-            Route::get('/api/users-search', 'getUsers')->name('getUsers');
+            Route::get('/api/users-search', [PeminjamanController::class, 'getUsers'])->name('getUsers');
             Route::get('/api/books-search', 'getBooks')->name('api.books.search');
             Route::get('/api/get-eksemplar/{buku_id}', 'getEksemplar')->name('getEksemplar');
 });
@@ -189,7 +192,8 @@ Route::middleware(['auth'])->group(function () {
     */
     Route::middleware(['checkRole:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-        Route::resource('pustakawan', PustakawanController::class)->except(['show', 'edit', 'update']);
+        Route::resource('pustakawan', PustakawanController::class)->except(['show', 'edit']);
+        Route::put('/pustakawan/{id}', [PustakawanController::class, 'update'])->name('pustakawan.update');
         Route::get('/whatsapp', [AdminWhatsappController::class, 'index'])->name('whatsapp.index');
         Route::get('/users', [AdminController::class, 'indexUsers'])->name('users.index');
         Route::get('/denda', [AdminController::class, 'indexDenda'])->name('denda.index');
@@ -238,7 +242,7 @@ Route::middleware(['auth'])->group(function () {
     // FITUR USULAN BUKU DOSEN
     Route::get('/usulan-buku/baru', [UsulanController::class, 'create'])->name('usulan.create');
     Route::post('/usulan/store', [UsulanController::class, 'store'])->name('usulan.store');
-    
+
     // PERBAIKAN: Cukup tulis 'usulan.riwayat', nanti otomatis jadi 'dosen.usulan.riwayat'
     Route::get('/riwayat-usulan', [UsulanController::class, 'index'])->name('usulan.riwayat');
 

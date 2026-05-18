@@ -13,13 +13,40 @@
 </head>
 <body class="antialiased">
 
-    <nav class="bg-[#2D3E50] text-white p-4 sticky top-0 z-50 shadow-md">
-        <div class="container mx-auto flex justify-between items-center px-6">
-            <div class="flex items-center space-x-3">
-                <img src="{{ asset('images/logo_ith.png') }}" alt="Logo" class="h-8">
-                <span class="text-[10px] font-bold uppercase tracking-wider">Digital <span class="text-yellow-400">Library ITH</span></span>
+    {{-- Navbar Seragam Sesuai Referensi Gambar --}}
+    <nav class="bg-[#2D3E50] text-white py-4 px-6 sticky top-0 z-50 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+
+            {{-- Sisi Kiri: Tombol Kembali, Logo, dan Nama Instansi --}}
+            <div class="flex items-center space-x-5">
+                {{-- Tombol Kembali mengarah ke Beranda Dosen --}}
+                <a href="{{ route('dosen.beranda') }}" class="text-white hover:text-slate-300 transition text-xl flex items-center">
+                    <i class="bi bi-arrow-left text-2xl font-bold"></i>
+                </a>
+
+                {{-- Garis Pembatas Vertikal Pertama --}}
+                <div class="h-8 w-[1px] bg-slate-500/40"></div>
+
+                {{-- Logo dan Teks Instansi Perpustakaan --}}
+                <div class="flex items-center space-x-3">
+                    <img src="{{ asset('images/logo_ith.png') }}" alt="Logo" class="h-9">
+
+                    {{-- Garis Pembatas Vertikal Kedua --}}
+                    <div class="h-8 w-[1px] bg-slate-500/40 mx-1"></div>
+
+                    <div class="flex flex-col">
+                        <span class="text-xs font-black uppercase tracking-wider leading-none">PERPUSTAKAAN</span>
+                        <span class="text-[8px] text-yellow-400 font-bold uppercase tracking-wider mt-1">Institut Teknologi Bacharuddin Jusuf Habibie</span>
+                    </div>
+                </div>
             </div>
-            <a href="{{ route('dosen.beranda') }}" class="text-[10px] font-bold uppercase hover:text-yellow-400 transition">Kembali</a>
+
+            {{-- Sisi Kanan: Informasi Dosen yang Aktif --}}
+            <div class="flex flex-col text-right">
+                <span class="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Pengguna Aktif</span>
+                <span class="text-xs font-bold text-white tracking-wide leading-none">{{ Auth::user()->name }}</span>
+            </div>
+
         </div>
     </nav>
 
@@ -39,10 +66,10 @@
 
             <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 overflow-hidden border border-slate-100">
                 <div class="p-1 bg-gradient-to-r from-yellow-400 to-amber-500"></div>
-                
+
                 <form action="{{ route('dosen.usulan.store') }}" method="POST" class="p-10 space-y-8">
                     @csrf
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {{-- Judul Buku --}}
                         <div class="md:col-span-2">
@@ -56,7 +83,7 @@
                             <input type="text" name="penulis" required class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-yellow-500 transition text-sm font-semibold" placeholder="Nama Lengkap Penulis">
                         </div>
 
-                        {{-- Penerbit (BARU) --}}
+                        {{-- Penerbit --}}
                         <div>
                             <label class="block text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Penerbit</label>
                             <input type="text" name="penerbit" required class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-yellow-500 transition text-sm font-semibold" placeholder="Contoh: Andi Offset">

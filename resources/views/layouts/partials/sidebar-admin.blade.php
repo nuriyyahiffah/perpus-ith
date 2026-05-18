@@ -11,7 +11,7 @@
         </div>
     </div>
 
-    
+
 
     {{-- Navigasi Utama --}}
     <nav class="flex-1 px-6 space-y-2 pb-10 overflow-y-auto custom-scrollbar">
@@ -33,7 +33,7 @@
         </div>
         <i class="bi bi-chevron-down text-[10px] transition-transform duration-300" :class="open ? 'rotate-180' : ''"></i>
     </button>
-    
+
     <div x-show="open" x-cloak x-transition class="mt-1 ml-9 space-y-1 border-l-2 border-slate-800/50 pl-6">
         <a href="{{ route('shared.mahasiswa.index') }}" class="block py-2 text-xs {{ request()->routeIs('shared.mahasiswa.*') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Data Mahasiswa</a>
         <a href="{{ route('shared.dosen.index') }}" class="block py-2 text-xs {{ request()->routeIs('shared.dosen.*') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Data Dosen</a>
@@ -43,21 +43,24 @@
     </div>
 </div>
 
-        {{--  MANAJEMEN BUKU --}}
-        <div x-data="{ open: {{ request()->is('kelola/buku*') || request()->is('kelola/kategori-buku*') ? 'true' : 'false' }} }">
-            <button @click="open = !open"
-                class="w-full flex items-center justify-between px-7 py-4 rounded-2xl transition-colors duration-200 {{ request()->is('kelola/buku*') || request()->is('kelola/kategori-buku*') ? 'bg-yellow-400 text-[#10192A]' : 'hover:bg-slate-800/50 text-slate-300 hover:text-white' }}">
-                <div class="flex items-center gap-5">
-                    <i class="bi bi-book-half text-xl"></i>
-                    <span class="text-[13px] font-black uppercase tracking-wider">Manajemen Buku</span>
-                </div>
-                <i class="bi bi-chevron-down text-[10px] transition-transform duration-300" :class="open ? 'rotate-180' : ''"></i>
-            </button>
-            <div x-show="open" x-cloak x-transition class="mt-1 ml-9 space-y-1 border-l-2 border-slate-800/50 pl-6">
-                <a href="{{ route('shared.buku.index') }}" class="block py-2 text-xs {{ request()->is('kelola/buku') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Katalog Buku</a>
-                <a href="{{ route('shared.kategori-buku.index') }}" class="block py-2 text-xs {{ request()->routeIs('shared.kategori-buku.*') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Kategori Prodi</a>
-            </div>
+{{--  MANAJEMEN BUKU --}}
+<div x-data="{ open: {{ request()->is('kelola/buku*') || request()->is('kelola/kategori-buku*') || request()->is('shared/klasifikasi*') || request()->routeIs('klasifikasi.*') ? 'true' : 'false' }} }">
+    <button @click="open = !open"
+        class="w-full flex items-center justify-between px-7 py-4 rounded-2xl transition-colors duration-200 {{ request()->is('kelola/buku*') || request()->is('kelola/kategori-buku*') || request()->is('shared/klasifikasi*') || request()->routeIs('klasifikasi.*') ? 'bg-yellow-400 text-[#10192A]' : 'hover:bg-slate-800/50 text-slate-300 hover:text-white' }}">
+        <div class="flex items-center gap-5">
+            <i class="bi bi-book-half text-xl"></i>
+            <span class="text-[13px] font-black uppercase tracking-wider">Manajemen Buku</span>
         </div>
+        <i class="bi bi-chevron-down text-[10px] transition-transform duration-300" :class="open ? 'rotate-180' : ''"></i>
+    </button>
+    <div x-show="open" x-cloak x-transition class="mt-1 ml-9 space-y-1 border-l-2 border-slate-800/50 pl-6">
+        <a href="{{ route('shared.buku.index') }}" class="block py-2 text-xs {{ request()->is('kelola/buku') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Katalog Buku</a>
+        <a href="{{ route('shared.kategori-buku.index') }}" class="block py-2 text-xs {{ request()->routeIs('shared.kategori-buku.*') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Kategori Prodi</a>
+        
+        {{-- Sub Menu Baru: Klasifikasi DDC --}}
+        <a href="{{ route('shared.klasifikasi.index') }}" class="block py-2 text-xs {{ request()->routeIs('klasifikasi.*') || request()->is('shared/klasifikasi*') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Klasifikasi DDC</a>
+    </div>
+</div>
 
         {{-- SIRKULASI --}}
         <div x-data="{ open: {{ request()->is('kelola/transaksi*') || request()->is('kelola/peminjaman*') ? 'true' : 'false' }} }">
@@ -71,21 +74,20 @@
             </button>
             <div x-show="open" x-cloak x-transition class="mt-1 ml-9 space-y-1 border-l-2 border-slate-800/50 pl-6">
                 <a href="{{ route('shared.transaksi.index') }}" class="block py-2 text-xs {{ request()->routeIs('shared.transaksi.index') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Daftar Transaksi</a>
-                <a href="{{ route('shared.peminjaman.create') }}" class="block py-2 text-xs {{ request()->routeIs('shared.peminjaman.create') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Input Peminjaman Baru</a>
                 <a href="{{ route('shared.usulan.index') }}" class="block py-2 text-xs {{ request()->routeIs('shared.usulan.index') ? 'text-yellow-400 font-bold' : 'text-slate-500 hover:text-white' }}">Konfirmasi Usulan Buku</a>
             </div>
         </div>
 
             {{-- Menu Kelola Reservasi (Shared) --}}
-<a href="{{ route('reservasi.index') }}" 
+<a href="{{ route('reservasi.index') }}"
    class="flex items-center gap-3 px-6 py-3 transition-all duration-300 group
    {{ request()->routeIs('reservasi.index') ? 'bg-[#FFD700] rounded-r-full text-[#1E293B]' : 'hover:bg-white/5 text-slate-400 hover:text-white' }}">
-    
+
     <div class="p-2 rounded-lg transition-all
         {{ request()->routeIs('reservasi.index') ? 'bg-[#1E293B] text-[#FFD700]' : 'bg-transparent text-slate-400 group-hover:text-white' }}">
         <i class="bi bi-calendar-check"></i>
     </div>
-    
+
     <span class="text-[11px] font-black uppercase tracking-wider">
         Kelola Reservasi
     </span>
